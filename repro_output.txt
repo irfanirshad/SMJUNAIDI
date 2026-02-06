@@ -1,0 +1,39 @@
+Logging in...
+Login failed. Response: {"message":"This account uses Google sign-in. Please use Google to login, or set a password first from your profile.","stack":"Error: This account uses Google sign-in. Please use Google to login, or set a password first from your profile.\n    at file:///Users/noor_mohammad/Documents/GitHub/turbo-babymart/apps/api/controllers/authController.js:25:11\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)"}
+Creating user...
+{"message":"This email is already registered with Google. Please sign in with Google, or set a password from your profile to use email/password login.","stack":"Error: This email is already registered with Google. Please sign in with Google, or set a password from your profile to use email/password login.\n    at file:///Users/noor_mohammad/Documents/GitHub/turbo-babymart/apps/api/controllers/authController.js:67:13\n    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)"}Token: 
+Testing SSLCommerz Init...
+Note: Unnecessary use of -X or --request, POST is already inferred.
+* Uses proxy env variable NO_PROXY == '*.azureedge.net'
+* Host localhost:8000 was resolved.
+* IPv6: ::1
+* IPv4: 127.0.0.1
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0*   Trying [::1]:8000...
+* Connected to localhost (::1) port 8000
+> POST /api/payments/sslcommerz/init HTTP/1.1
+> Host: localhost:8000
+> User-Agent: curl/8.7.1
+> Accept: */*
+> Content-Type: application/json
+> Authorization: Bearer 
+> Content-Length: 79
+> 
+} [79 bytes data]
+* upload completely sent off: 79 bytes
+< HTTP/1.1 401 Unauthorized
+< X-Powered-By: Express
+< Vary: Origin
+< Access-Control-Allow-Credentials: true
+< Content-Type: application/json; charset=utf-8
+< Content-Length: 1216
+< ETag: W/"4c0-N40O7bkIJlCrD01B3vXwowID+cQ"
+< Date: Sat, 06 Dec 2025 08:56:59 GMT
+< Connection: keep-alive
+< Keep-Alive: timeout=5
+< 
+{ [1216 bytes data]
+100  1295  100  1216  100    79   783k  52145 --:--:-- --:--:-- --:--:-- 1264k
+* Connection #0 to host localhost left intact
+{"message":"Not authorized, token failed","stack":"Error: Not authorized, token failed\n    at file:///Users/noor_mohammad/Documents/GitHub/turbo-babymart/apps/api/middleware/authMiddleware.js:33:13\n    at asyncUtilWrap (/Users/noor_mohammad/Documents/GitHub/turbo-babymart/node_modules/express-async-handler/index.js:3:20)\n    at Layer.handleRequest (/Users/noor_mohammad/Documents/GitHub/turbo-babymart/node_modules/router/lib/layer.js:152:17)\n    at next (/Users/noor_mohammad/Documents/GitHub/turbo-babymart/node_modules/router/lib/route.js:157:13)\n    at Route.dispatch (/Users/noor_mohammad/Documents/GitHub/turbo-babymart/node_modules/router/lib/route.js:117:3)\n    at handle (/Users/noor_mohammad/Documents/GitHub/turbo-babymart/node_modules/router/index.js:435:11)\n    at Layer.handleRequest (/Users/noor_mohammad/Documents/GitHub/turbo-babymart/node_modules/router/lib/layer.js:152:17)\n    at /Users/noor_mohammad/Documents/GitHub/turbo-babymart/node_modules/router/index.js:295:15\n    at processParams (/Users/noor_mohammad/Documents/GitHub/turbo-babymart/node_modules/router/index.js:582:12)\n    at next (/Users/noor_mohammad/Documents/GitHub/turbo-babymart/node_modules/router/index.js:291:5)"}

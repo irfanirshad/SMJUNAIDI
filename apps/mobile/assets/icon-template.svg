@@ -1,0 +1,22 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1024" height="1024" fill="#29beb3" rx="180"/>
+  
+  <!-- White circle background for logo -->
+  <circle cx="512" cy="512" r="320" fill="#ffffff"/>
+  
+  <!-- Logo Placeholder - Replace with your smallLogo.png -->
+  <!-- You can embed the actual logo as base64 or open this in a design tool and place the logo -->
+  <g transform="translate(512, 512)">
+    <!-- This is a placeholder representation -->
+    <!-- Replace this with your actual smallLogo.png in Figma/Sketch/etc -->
+    <rect x="-155" y="-165" width="310" height="330" fill="#29beb3" rx="30"/>
+    <text x="0" y="50" font-family="Arial, Helvetica, sans-serif" font-size="180" font-weight="bold" fill="#ffffff" text-anchor="middle">B</text>
+  </g>
+  
+  <!-- Decorative accent dots -->
+  <circle cx="150" cy="150" r="20" fill="#ffd700" opacity="0.6"/>
+  <circle cx="874" cy="874" r="20" fill="#ffd700" opacity="0.6"/>
+  <circle cx="150" cy="874" r="16" fill="#ff69b4" opacity="0.6"/>
+  <circle cx="874" cy="150" r="16" fill="#ff69b4" opacity="0.6"/>
+</svg>

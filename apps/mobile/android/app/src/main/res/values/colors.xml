@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Babymart Brand Colors -->
+    <color name="splash_background">#29beb3</color>
+    <color name="primary_brand">#29beb3</color>
+    <color name="white">#ffffff</color>
+    <color name="primary_text">#333333</color>
+    <color name="baby_pink">#ff69b4</color>
+    <color name="baby_yellow">#ffd700</color>
+</resources>

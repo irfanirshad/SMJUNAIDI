@@ -1,0 +1,50 @@
+{
+  "name": "babyshop-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Babyshop e-commerce platform monorepo",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "turbo build",
+    "build:packages": "npm run build --workspace=@babyshop/types --workspace=@babyshop/ui --workspace=@babyshop/config",
+    "setup": "npm install && npm run build:packages",
+    "dev": "turbo dev --filter=@babyshop/web --filter=@babyshop/admin --filter=@babyshop/api --parallel",
+    "dev:web": "turbo dev --filter=@babyshop/web",
+    "dev:admin": "turbo dev --filter=@babyshop/admin",
+    "dev:api": "turbo dev --filter=@babyshop/api",
+    "dev:mobile": "turbo dev --filter=@babyshop/mobile",
+    "dev:all": "turbo dev --parallel",
+    "ios": "turbo run ios --filter=@babyshop/mobile",
+    "android": "turbo run android --filter=@babyshop/mobile",
+    "webhook:api": "stripe listen --forward-to localhost:8000/api/payment/webhook",
+    "webhook:web": "stripe listen --forward-to localhost:3000/api/stripe-webhook",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "clean": "turbo clean",
+    "type-check": "turbo type-check"
+  },
+  "devDependencies": {
+    "@turbo/gen": "^2.6.1",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
+    "eslint": "^8.57.1",
+    "prettier": "^3.6.2",
+    "turbo": "^2.6.1",
+    "typescript": "^5.9.3"
+  },
+  "packageManager": "npm@10.0.0",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "chalk-ts": "^1.0.0",
+    "mongodb": "^7.0.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-router-dom": "^7.10.1"
+  }
+}

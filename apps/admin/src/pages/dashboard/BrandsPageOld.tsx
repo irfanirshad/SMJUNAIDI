@@ -1,0 +1,855 @@
+/* eslint-disable react-hooks/exhaustive-deps */
+import { useState, useEffect, useMemo } from "react";
+import { useAxiosPrivate } from "@/hooks/useAxiosPrivate";
+import { useToast } from "@/hooks/use-toast";
+import useAuthStore from "@/store/useAuthStore";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import { z } from "zod";
+import { brandSchema } from "@/lib/validation";
+import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
+import {
+  Edit,
+  Trash,
+  Plus,
+  Loader2,
+  RefreshCw,
+  Search,
+  Filter,
+  X,
+  Image as ImageIcon,
+} from "lucide-react";
+import { ImageUpload } from "@/components/ui/image-upload";
+
+type Brand = {
+  _id: string;
+  name: string;
+  image?: string;
+  createdAt: string;
+};
+
+type FormData = z.infer<typeof brandSchema>;
+
+type BrandResponse = {
+  brands: Brand[];
+  total: number;
+  page: number;
+  perPage: number;
+  totalPages: number;
+};
+
+export default function BrandsPage() {
+  // Data state
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [perPage, setPerPage] = useState(10);
+
+  // Filter state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [showFilters, setShowFilters] = useState(false);
+
+  // Modal state
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
+  const [formLoading, setFormLoading] = useState(false);
+
+  const axiosPrivate = useAxiosPrivate();
+  const { toast } = useToast();
+  const { checkIsAdmin } = useAuthStore();
+  const isAdmin = checkIsAdmin();
+
+  const formAdd = useForm<FormData>({
+    resolver: zodResolver(brandSchema),
+    defaultValues: {
+      name: "",
+      image: "",
+    },
+  });
+
+  const formEdit = useForm<FormData>({
+    resolver: zodResolver(brandSchema),
+    defaultValues: {
+      name: "",
+      image: "",
+    },
+  });
+
+  // Enhanced fetch function with pagination and filters
+  const fetchBrands = async (page = 1, isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+
+      const params = new URLSearchParams({
+        page: page.toString(),
+        perPage: perPage.toString(),
+        sortOrder,
+        ...(searchTerm && { search: searchTerm }),
+      });
+
+      const response = await axiosPrivate.get<BrandResponse>(`/brands/admin?${params}`);
+      const { brands: fetchedBrands, total, totalPages } = response.data;
+
+      setBrands(fetchedBrands);
+      setTotal(total);
+      setTotalPages(totalPages);
+      setCurrentPage(page);
+
+      if (isRefresh) {
+        toast({
+          title: "Success",
+          description: "Brands refreshed successfully",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to load brands", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load brands",
+      });
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // Debounced search
+  const debouncedSearchTerm = useMemo(() => {
+    const handler = setTimeout(() => {
+      if (searchTerm !== null) {
+        setCurrentPage(1);
+        fetchBrands(1);
+      }
+    }, 500);
+
+    return () => clearTimeout(handler);
+  }, [searchTerm, sortOrder, perPage]);
+
+  // Clear filters
+  const clearFilters = () => {
+    setSearchTerm("");
+    setSortOrder("desc");
+    setCurrentPage(1);
+    setPerPage(10);
+  };
+
+  const handleRefresh = () => {
+    fetchBrands(currentPage, true);
+  };
+
+  useEffect(() => {
+    fetchBrands(1);
+  }, []);
+
+  useEffect(() => {
+    debouncedSearchTerm;
+  }, [debouncedSearchTerm]);
+
+  const handleEdit = (brand: Brand) => {
+    setSelectedBrand(brand);
+    formEdit.reset({
+      name: brand.name,
+      image: brand.image || "", // Ensure image is set or empty
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleDelete = (brand: Brand) => {
+    setSelectedBrand(brand);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleAddBrand = async (data: FormData) => {
+    setFormLoading(true);
+    try {
+      await axiosPrivate.post("/brands", data);
+      toast({
+        title: "Success",
+        description: "Brand created successfully",
+      });
+      formAdd.reset();
+      setIsAddModalOpen(false);
+      fetchBrands(1); // Reset to first page
+    } catch (error) {
+      console.error("Failed to create brand", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to create brand",
+      });
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleUpdateBrand = async (data: FormData) => {
+    if (!selectedBrand) return;
+
+    setFormLoading(true);
+    try {
+      await axiosPrivate.put(`/brands/${selectedBrand._id}`, data);
+      toast({
+        title: "Success",
+        description: "Brand updated successfully",
+      });
+      setIsEditModalOpen(false);
+      fetchBrands(currentPage); // Stay on current page
+    } catch (error) {
+      console.error("Failed to update brand", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update brand",
+      });
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleDeleteBrand = async () => {
+    if (!selectedBrand) return;
+
+    try {
+      await axiosPrivate.delete(`/brands/${selectedBrand._id}`);
+      toast({
+        title: "Success",
+        description: "Brand deleted successfully",
+      });
+      setIsDeleteModalOpen(false);
+      
+      // Smart pagination after delete
+      const newTotal = total - 1;
+      const newTotalPages = Math.ceil(newTotal / perPage);
+      const targetPage = currentPage > newTotalPages ? Math.max(1, newTotalPages) : currentPage;
+      
+      fetchBrands(targetPage);
+    } catch (error) {
+      console.error("Failed to delete brand", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete brand",
+      });
+    }
+  };
+
+  // Skeleton loading component
+  const SkeletonRow = () => (
+    <TableRow>
+      <TableCell><Skeleton className="h-4 w-8" /></TableCell>
+      <TableCell><Skeleton className="h-10 w-10 rounded" /></TableCell>
+      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+      <TableCell>
+        <div className="flex gap-2">
+          <Skeleton className="h-8 w-8" />
+          <Skeleton className="h-8 w-8" />
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="space-y-6"
+    >
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Brands</h1>
+          <p className="text-muted-foreground">Manage your brand catalog</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={refreshing}
+            size="sm"
+          >
+            <RefreshCw
+              className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+            />
+            {refreshing ? "Refreshing..." : "Refresh"}
+          </Button>
+          {isAdmin && (
+            <Button onClick={() => setIsAddModalOpen(true)} size="sm">
+              <Plus className="mr-2 h-4 w-4" /> Add Brand
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Brands</CardTitle>
+            <ImageIcon className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {loading ? <Skeleton className="h-8 w-16" /> : total}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Current Page</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {loading ? <Skeleton className="h-8 w-16" /> : `${currentPage} of ${totalPages}`}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Per Page</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {loading ? <Skeleton className="h-8 w-16" /> : perPage}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg">Search & Filters</CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <Filter className="mr-2 h-4 w-4" />
+              {showFilters ? "Hide" : "Show"} Filters
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Search */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                <Input
+                  placeholder="Search brands..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            <Button
+              variant="outline"
+              onClick={clearFilters}
+              disabled={!searchTerm && sortOrder === "desc"}
+              size="sm"
+            >
+              <X className="mr-2 h-4 w-4" />
+              Clear
+            </Button>
+          </div>
+
+          {/* Advanced Filters */}
+          {showFilters && (
+            <motion.div 
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-4 border-t"
+            >
+              <div>
+                <label className="text-sm font-medium mb-2 block">Sort Order</label>
+                <Select value={sortOrder} onValueChange={(value: "asc" | "desc") => setSortOrder(value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select sort order" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="desc">Newest First</SelectItem>
+                    <SelectItem value="asc">Oldest First</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">Items Per Page</label>
+                <Select value={perPage.toString()} onValueChange={(value) => setPerPage(Number(value))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select items per page" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="5">5 per page</SelectItem>
+                    <SelectItem value="10">10 per page</SelectItem>
+                    <SelectItem value="20">20 per page</SelectItem>
+                    <SelectItem value="50">50 per page</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </motion.div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Results Summary */}
+      {!loading && (
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>
+            Showing {brands.length} of {total} brands
+            {searchTerm && ` for "${searchTerm}"`}
+          </span>
+          {(searchTerm || sortOrder !== "desc") && (
+            <Badge variant="secondary" className="ml-2">
+              {[
+                searchTerm && "Filtered",
+                sortOrder === "asc" && "Sorted",
+              ].filter(Boolean).join(" & ")}
+            </Badge>
+          )}
+        </div>
+      )}
+
+      {/* Table */}
+      <Card>
+        <div className="rounded-md border-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[50px]">#</TableHead>
+                <TableHead className="w-[80px]">Image</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Created</TableHead>
+                {isAdmin && <TableHead className="w-[100px]">Actions</TableHead>}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                // Skeleton loading
+                Array.from({ length: perPage }).map((_, index) => (
+                  <SkeletonRow key={`skeleton-${index}`} />
+                ))
+              ) : brands.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={isAdmin ? 5 : 4} className="text-center py-8">
+                    <div className="flex flex-col items-center gap-2 text-muted-foreground">
+                      <ImageIcon className="h-8 w-8" />
+                      <span>No brands found</span>
+                      {searchTerm && (
+                        <Button variant="link" onClick={() => setSearchTerm("")} size="sm">
+                          Clear search to see all brands
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                brands.map((brand, index) => (
+                  <motion.tr
+                    key={brand._id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: index * 0.05 }}
+                    className="group hover:bg-muted/50"
+                  >
+                    <TableCell className="font-medium">
+                      {(currentPage - 1) * perPage + index + 1}
+                    </TableCell>
+                    <TableCell>
+                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-muted flex items-center justify-center">
+                        {brand.image ? (
+                          <img
+                            src={brand.image}
+                            alt={brand.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-medium">{brand.name}</TableCell>
+                    <TableCell>
+                      {new Date(brand.createdAt).toLocaleDateString()}
+                    </TableCell>
+                    {isAdmin && (
+                      <TableCell>
+                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(brand)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDelete(brand)}
+                          >
+                            <Trash className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
+                  </motion.tr>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </Card>
+
+      {/* Pagination */}
+      {!loading && totalPages > 1 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="text-sm text-muted-foreground">
+            Page {currentPage} of {totalPages} ({total} total brands)
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchBrands(1)}
+              disabled={currentPage === 1}
+            >
+              First
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchBrands(currentPage - 1)}
+              disabled={currentPage === 1}
+            >
+              Previous
+            </Button>
+            
+            {/* Page numbers */}
+            <div className="flex items-center gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                const pageNum = Math.max(1, Math.min(totalPages - 4, currentPage - 2)) + i;
+                if (pageNum > totalPages) return null;
+                
+                return (
+                  <Button
+                    key={pageNum}
+                    variant={currentPage === pageNum ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => fetchBrands(pageNum)}
+                    className="w-10"
+                  >
+                    {pageNum}
+                  </Button>
+                );
+              })}
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchBrands(currentPage + 1)}
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => fetchBrands(totalPages)}
+              disabled={currentPage === totalPages}
+            >
+              Last
+            </Button>
+          </div>
+        </div>
+      )}
+
+      <Separator />
+              <TableRow>
+                <TableHead className="w-[80px]">Image</TableHead>
+                <TableHead>Name</TableHead>
+                <TableHead>Created At</TableHead>
+                {isAdmin && (
+                  <TableHead className="text-right">Actions</TableHead>
+                )}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {brands.map((brand) => (
+                <TableRow key={brand._id}>
+                  <TableCell>
+                    {brand.image ? (
+                      <div className="h-12 w-12 rounded overflow-hidden bg-muted">
+                        <img
+                          src={brand.image}
+                          alt={brand.name}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="h-12 w-12 rounded bg-muted flex items-center justify-center text-muted-foreground">
+                        No Image
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell className="font-medium">{brand.name}</TableCell>
+                  <TableCell>
+                    {new Date(brand.createdAt).toLocaleDateString()}
+                  </TableCell>
+                  {isAdmin && (
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(brand)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(brand)}
+                      >
+                        <Trash className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  )}
+                </TableRow>
+              ))}
+              {brands.length === 0 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={isAdmin ? 4 : 3}
+                    className="text-center py-10 text-muted-foreground"
+                  >
+                    No brands found
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
+      {/* Add Brand Modal */}
+      <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add Brand</DialogTitle>
+            <DialogDescription>Create a new product brand</DialogDescription>
+          </DialogHeader>
+          <Form {...formAdd}>
+            <form
+              onSubmit={formAdd.handleSubmit(handleAddBrand)}
+              className="space-y-4"
+            >
+              <FormField
+                control={formAdd.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} disabled={formLoading} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={formAdd.control}
+                name="image"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Brand Image (Optional)</FormLabel>
+                    <FormControl>
+                      <ImageUpload
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                        disabled={formLoading}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsAddModalOpen(false)}
+                  disabled={formLoading}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={formLoading}>
+                  {formLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    "Create Brand"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Brand Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Brand</DialogTitle>
+            <DialogDescription>Update brand information</DialogDescription>
+          </DialogHeader>
+          <Form {...formEdit}>
+            <form
+              onSubmit={formEdit.handleSubmit(handleUpdateBrand)}
+              className="space-y-4"
+            >
+              <FormField
+                control={formEdit.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Name</FormLabel>
+                    <FormControl>
+                      <Input {...field} disabled={formLoading} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={formEdit.control}
+                name="image"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Brand Image (Optional)</FormLabel>
+                    <FormControl>
+                      <ImageUpload
+                        value={field.value ?? ""}
+                        onChange={field.onChange}
+                        disabled={formLoading}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsEditModalOpen(false)}
+                  disabled={formLoading}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={formLoading}>
+                  {formLoading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    "Update Brand"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Brand Confirmation */}
+      <AlertDialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the
+              brand <span className="font-semibold">{selectedBrand?.name}</span>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteBrand}
+              className="bg-destructive hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </motion.div>
+  );
+}

@@ -1,0 +1,39 @@
+{
+  "name": "@babyshop/api",
+  "version": "1.0.0",
+  "description": "Backend API for Babymart platform",
+  "main": "server.js",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "build": "echo 'API server does not need build step'",
+    "lint": "echo 'Linting not configured for API'",
+    "type-check": "echo 'Type checking not configured for API'",
+    "generate-slugs": "node scripts/generateProductSlugs.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.932.0",
+    "@aws-sdk/s3-request-presigner": "^3.932.0",
+    "bcryptjs": "^3.0.2",
+    "cloudinary": "^2.6.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "express-async-handler": "^1.2.0",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^9.0.1",
+    "multer": "^2.0.2",
+    "multer-s3": "^3.0.1",
+    "node-fetch": "^3.3.2",
+    "nodemailer": "^7.0.5",
+    "sharp": "^0.34.5",
+    "razorpay": "^2.9.4",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
+  }
+}

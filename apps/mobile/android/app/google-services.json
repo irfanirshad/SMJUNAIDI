@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "789634856731",
+    "project_id": "turbo-babymart",
+    "storage_bucket": "turbo-babymart.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:789634856731:android:5e1e98899decc51dba45be",
+        "android_client_info": {
+          "package_name": "com.babymart.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "789634856731-n05vu55od7dshjcaeki22849vlhq8ljt.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.babymart.app",
+            "certificate_hash": "367a3d27f04d01d2b85232b8477db9161fad61a2"
+          }
+        },
+        {
+          "client_id": "789634856731-sptqmdk3n82fu51c08e0u8ciadjqd3k8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB6iPsMwhgB-bXnzCJlgGW2X6bT9C1pLG8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "789634856731-sptqmdk3n82fu51c08e0u8ciadjqd3k8.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "789634856731-1si3rnj1k1f7a08hm394fl518gj25fis.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.babymart.app"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

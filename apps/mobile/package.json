@@ -1,0 +1,61 @@
+{
+  "name": "@babyshop/mobile",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "android": "react-native run-android",
+    "ios": "react-native run-ios",
+    "lint": "eslint .",
+    "start": "react-native start",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@babel/runtime": "^7.28.4",
+    "@babyshop/config": "^1.0.0",
+    "@babyshop/types": "^1.0.0",
+    "@hugeicons/core-free-icons": "^1.2.1",
+    "@hugeicons/react-native": "^1.0.7",
+    "@react-native-async-storage/async-storage": "^2.2.0",
+    "@react-native-google-signin/google-signin": "^16.0.0",
+    "@react-native-picker/picker": "^2.11.4",
+    "@react-native/new-app-screen": "0.82.1",
+    "@react-navigation/bottom-tabs": "^7.4.2",
+    "@react-navigation/native": "^7.1.14",
+    "@react-navigation/stack": "^7.4.2",
+    "@stripe/stripe-react-native": "^0.50.1",
+    "react": "^19.2.3",
+    "react-native": "^0.83.1",
+    "react-native-gesture-handler": "^2.27.2",
+    "react-native-image-picker": "^8.2.1",
+    "react-native-safe-area-context": "^5.5.2",
+    "react-native-screens": "^4.13.1",
+    "react-native-svg": "^15.12.0",
+    "react-native-svg-transformer": "^1.5.1",
+    "react-native-voice-ts": "^1.0.7",
+    "react-native-webview": "^13.12.2",
+    "zustand": "^5.0.8"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.28.5",
+    "@babel/eslint-parser": "^7.28.5",
+    "@babel/preset-env": "^7.28.5",
+    "@react-native-community/cli": "19.0.0",
+    "@react-native-community/cli-platform-android": "19.0.0",
+    "@react-native-community/cli-platform-ios": "19.0.0",
+    "@react-native/babel-preset": "^0.80.2",
+    "@react-native/eslint-config": "0.80.1",
+    "@react-native/metro-config": "0.82.1",
+    "@react-native/typescript-config": "0.80.1",
+    "@types/jest": "^29.5.14",
+    "@types/react": "^19.2.3",
+    "@types/react-test-renderer": "^19.1.0",
+    "eslint": "^8.57.1",
+    "jest": "^29.7.0",
+    "prettier": "2.8.8",
+    "react-test-renderer": "19.1.1",
+    "typescript": "5.0.4"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
