@@ -27,7 +27,7 @@ export function generateProductSchema(product: Product, url: string) {
     offers: {
       "@type": "Offer",
       url: `https://babymart.reactbd.com${url}`,
-      priceCurrency: "USD",
+      priceCurrency: "INR",
       price: product.price,
       availability: `https://schema.org/${product.availability || "InStock"}`,
       seller: {

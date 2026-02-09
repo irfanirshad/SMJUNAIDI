@@ -46,9 +46,9 @@ const createTransporter = () => {
 // Generate order confirmation email HTML
 const generateOrderConfirmationHTML = (userName, order) => {
     const formatCurrency = (amount) => {
-        return new Intl.NumberFormat("en-US", {
-            style: "currency",
-            currency: "USD",
+        return new Intl.NumberFormat("en-IN", {
+          style: "currency",
+          currency: "INR"
         }).format(amount);
     };
     const formatDate = (date) => {

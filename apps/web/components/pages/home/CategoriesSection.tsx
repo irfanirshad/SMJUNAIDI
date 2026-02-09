@@ -111,7 +111,7 @@ const CategoriesSection = async () => {
             className="flex items-center gap-2 hover:text-babyshopSky hover:bg-babyshopSky/10 p-2 rounded-md hoverEffect text-sm"
           >
             <span className="text-babyshopSky">💰</span>
-            <p>Under $50</p>
+            <p>Under ₹50</p>
           </Link>
           <Link
             href="/user/orders"
@@ -166,7 +166,7 @@ const CategoriesSection = async () => {
             <span className="text-babyshopSky">🎉</span>
             <p className="font-medium text-sm">Free Shipping</p>
           </div>
-          <p className="text-xs text-gray-600 mb-2">On orders over $75</p>
+          <p className="text-xs text-gray-600 mb-2">On orders over ₹75</p>
           <Link
             href="/shop"
             className="text-xs text-babyshopSky hover:underline font-medium"

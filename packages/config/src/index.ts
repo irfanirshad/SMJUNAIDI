@@ -16,7 +16,7 @@ export const API_CONFIG = {
 
 export const PAYMENT_CONFIG = {
   STRIPE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "",
-  CURRENCY: "USD",
+  CURRENCY: "INR",
 };
 
 export const APP_CONFIG = {

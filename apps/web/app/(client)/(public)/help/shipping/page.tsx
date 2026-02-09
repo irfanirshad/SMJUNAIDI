@@ -9,21 +9,21 @@ const ShippingPage = () => {
   const shippingOptions = [
     {
       title: "Standard Shipping",
-      price: "Free on orders $50+",
+      price: "Free on orders ₹50+",
       time: "3-5 business days",
       description: "Our most popular shipping option with reliable delivery",
       icon: <Truck size={24} />,
     },
     {
       title: "Express Shipping",
-      price: "$9.99",
+      price: "₹9.99",
       time: "1-2 business days",
       description: "Fast delivery for when you need items quickly",
       icon: <Clock size={24} />,
     },
     {
       title: "Overnight Shipping",
-      price: "$19.99",
+      price: "₹19.99",
       time: "Next business day",
       description: "Next-day delivery available in select areas",
       icon: <Package size={24} />,
@@ -31,18 +31,18 @@ const ShippingPage = () => {
   ];
 
   const internationalZones = [
-    { zone: "Canada", time: "5-7 business days", price: "Starting at $12.99" },
-    { zone: "Europe", time: "7-10 business days", price: "Starting at $19.99" },
+    { zone: "Canada", time: "5-7 business days", price: "Starting at ₹12.99" },
+    { zone: "Europe", time: "7-10 business days", price: "Starting at ₹19.99" },
     {
       zone: "Australia",
       time: "10-14 business days",
-      price: "Starting at $24.99",
+      price: "Starting at ₹24.99",
     },
-    { zone: "Asia", time: "10-14 business days", price: "Starting at $22.99" },
+    { zone: "Asia", time: "10-14 business days", price: "Starting at ₹22.99" },
     {
       zone: "Rest of World",
       time: "14-21 business days",
-      price: "Starting at $29.99",
+      price: "Starting at ₹29.99",
     },
   ];
 
@@ -94,7 +94,7 @@ const ShippingPage = () => {
             <div className="mt-6 p-4 bg-blue-50 rounded-lg">
               <h4 className="font-semibold mb-2">Free Shipping Details:</h4>
               <ul className="text-sm text-gray-700 space-y-1">
-                <li>• Free standard shipping on orders $50 or more</li>
+                <li>• Free standard shipping on orders ₹50 or more</li>
                 <li>
                   • Applies to standard shipping within the continental US
                 </li>

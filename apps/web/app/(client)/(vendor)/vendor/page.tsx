@@ -103,7 +103,7 @@ export default function VendorDashboard() {
     },
     {
       name: "Total Revenue",
-      value: `$${stats.totalRevenue.toFixed(2)}`,
+      value: `₹${stats.totalRevenue.toFixed(2)}`,
       icon: DollarSign,
       iconBg: "bg-purple-100",
       iconColor: "text-purple-600",

@@ -58,7 +58,9 @@ export const createRazorpayOrder = asyncHandler(async (req, res) => {
       });
     }
 
-    const amountInSubunits = Math.round(amount * 100);
+    // Convert to gateway currency (INR) using optional rate so USD-priced catalogs can bill correctly
+    const conversionRate = Number(process.env.PAYMENT_CURRENCY_RATE || "1");
+    const amountInSubunits = Math.round(amount * conversionRate * 100);
     const razorpay = getRazorpayClient();
 
     const rpOrder = await razorpay.orders.create({

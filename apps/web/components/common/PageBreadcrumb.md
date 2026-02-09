@@ -100,7 +100,7 @@ interface ShareData {
   showSocialShare={true}
   shareData={{
     title: product.name,
-    text: `Check out this amazing ${product.name} for only $${product.price}`,
+    text: `Check out this amazing ${product.name} for only ₹${product.price}`,
     url: window.location.href,
   }}
 />

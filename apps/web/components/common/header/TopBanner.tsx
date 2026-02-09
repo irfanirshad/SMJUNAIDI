@@ -3,7 +3,6 @@ import Container from "../Container";
 import { topHelpCenter } from "@/constants/data";
 import Link from "next/link";
 import TopSocialLinksClient from "./TopSocialLinksClient";
-import SelectCurrency from "./SelectCurrency";
 
 const TopBanner = () => {
   return (
@@ -23,8 +22,8 @@ const TopBanner = () => {
         <p className="text-center hidden md:inline-flex">
           100% Secure delivery without contacting the courier
         </p>
-        <div className="hidden md:inline-flex items-center justify-end">
-          <SelectCurrency />
+        <div className="hidden md:inline-flex items-center justify-end gap-3">
+          <span className="text-sm font-semibold">₹ INR</span>
           <TopSocialLinksClient />
         </div>
       </Container>

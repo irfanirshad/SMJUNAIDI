@@ -231,7 +231,7 @@ const ProgramsPage = () => {
               </div>
               <div>
                 <div className="text-3xl font-bold text-babyshopSky mb-2">
-                  $2M+
+                  ₹2M+
                 </div>
                 <div className="text-gray-600">Commissions Paid</div>
               </div>

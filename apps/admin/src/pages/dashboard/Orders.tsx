@@ -1523,7 +1523,7 @@ export default function OrdersPage() {
                         Collected (Pending)
                       </h3>
                       <p className="text-2xl font-bold text-yellow-700 mt-1">
-                        $
+                        ₹
                         {collections
                           .filter((c) => c.status === "collected")
                           .reduce((sum, c) => sum + c.amount, 0)
@@ -1542,7 +1542,7 @@ export default function OrdersPage() {
                         Submitted
                       </h3>
                       <p className="text-2xl font-bold text-blue-700 mt-1">
-                        $
+                        ₹
                         {collections
                           .filter((c) => c.status === "submitted")
                           .reduce((sum, c) => sum + c.amount, 0)
@@ -1561,7 +1561,7 @@ export default function OrdersPage() {
                         Confirmed
                       </h3>
                       <p className="text-2xl font-bold text-green-700 mt-1">
-                        $
+                        ₹
                         {collections
                           .filter((c) => c.status === "confirmed")
                           .reduce((sum, c) => sum + c.amount, 0)
@@ -1850,16 +1850,16 @@ export default function OrdersPage() {
                   </div>
                   <div className="mt-4">
                     <p className="text-4xl font-bold text-green-700">
-                      ${((accountsStats?.totalReceived ?? 0).toFixed(2))}
+                      ₹{((accountsStats?.totalReceived ?? 0).toFixed(2))}
                     </p>
                     <p className="text-sm text-green-600 mt-2">
                       From {accountsStats?.totalReceivedCount || 0} confirmed
                       payment(s)
                     </p>
                     <p className="text-xs text-green-600 mt-1">
-                      Online: $
+                      Online: ₹
                       {(accountsStats?.onlineReceivedTotal ?? 0).toFixed(2)} •
-                      Cash: ${
+                      Cash: ₹{
                         (accountsStats?.cashReceivedTotal ?? 0).toFixed(2)
                       }
                     </p>
@@ -1879,7 +1879,7 @@ export default function OrdersPage() {
                         Pending to Receive
                       </p>
                       <p className="text-2xl font-bold text-orange-700">
-                        ${((accountsStats?.totalPending ?? 0).toFixed(2))}
+                        ₹{((accountsStats?.totalPending ?? 0).toFixed(2))}
                       </p>
                       <p className="text-xs text-gray-500">
                         {accountsStats?.totalPendingCount || 0} order(s) with
@@ -1899,7 +1899,7 @@ export default function OrdersPage() {
                         Pending Submissions
                       </p>
                       <p className="text-2xl font-bold text-purple-700">
-                        $
+                        ₹
                         {pendingSubmissions
                           .reduce((sum, s) => sum + s.amount, 0)
                           .toFixed(2)}
@@ -1919,7 +1919,7 @@ export default function OrdersPage() {
                     <div>
                       <p className="text-sm text-gray-600">Confirmed</p>
                       <p className="text-2xl font-bold text-green-700">
-                        ${((accountsStats?.totalReceived ?? 0).toFixed(2))}
+                        ₹{((accountsStats?.totalReceived ?? 0).toFixed(2))}
                       </p>
                       <p className="text-xs text-gray-500">
                         {accountsStats?.totalReceivedCount || 0} confirmed
@@ -2068,7 +2068,7 @@ export default function OrdersPage() {
                               </div>
                               <div className="text-right">
                                 <p className="text-xl font-bold text-purple-700">
-                                  ${submission.amount.toFixed(2)}
+                                  ₹{submission.amount.toFixed(2)}
                                 </p>
                               </div>
                             </div>
@@ -2134,7 +2134,7 @@ export default function OrdersPage() {
                         </div>
                         <div className="text-right">
                           <p className="text-xl font-bold text-green-700">
-                            ${submission.amount.toFixed(2)}
+                            ₹{submission.amount.toFixed(2)}
                           </p>
                         </div>
                       </div>
@@ -3403,7 +3403,7 @@ export default function OrdersPage() {
                               className="w-full bg-green-600 hover:bg-green-700"
                             >
                               <DollarSign className="h-4 w-4 mr-2" />
-                              Receive Cash ($
+                              Receive Cash (₹
                               {selectedOrder.total || selectedOrder.totalAmount}
                               )
                             </Button>
@@ -3416,7 +3416,7 @@ export default function OrdersPage() {
               {/* Total Amount */}
               <div>
                 <Label htmlFor="totalAmount">
-                  Total Amount ($)
+                  Total Amount (₹)
                   {canCallCenterEdit(originalOrderStatus) && (
                     <span className="ml-2 text-sm font-normal text-green-600">
                       (Editable until Confirmed)
@@ -3818,7 +3818,7 @@ export default function OrdersPage() {
                             />
                           </div>
                           <div>
-                            <Label>Unit Price ($)</Label>
+                            <Label>Unit Price (₹)</Label>
                             <Input
                               type="number"
                               step="0.01"
@@ -3854,7 +3854,7 @@ export default function OrdersPage() {
                             />
                           </div>
                           <div>
-                            <Label>Total Price ($)</Label>
+                            <Label>Total Price (₹)</Label>
                             <Input
                               type="number"
                               step="0.01"
@@ -3924,7 +3924,7 @@ export default function OrdersPage() {
                             </div>
                           </div>
                           <p className="font-medium">
-                            $
+                            ₹
                             {(item.product?.price || item.price || 0).toFixed(
                               2
                             )}
@@ -3941,7 +3941,7 @@ export default function OrdersPage() {
               <div className="flex justify-between items-center pt-4 border-t">
                 <span className="text-lg font-semibold">Total Amount:</span>
                 <span className="text-2xl font-bold text-blue-600">
-                  ${selectedOrder.totalAmount.toFixed(2)}
+                  ₹{selectedOrder.totalAmount.toFixed(2)}
                 </span>
               </div>
 

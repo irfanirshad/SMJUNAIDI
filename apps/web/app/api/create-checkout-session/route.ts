@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     // Create line items for Stripe
     const lineItems = items.map((item: CheckoutItem) => ({
       price_data: {
-        currency: item.currency || "usd",
+        currency: item.currency || "inr",
         product_data: {
           name: item.name,
           description: item.description,

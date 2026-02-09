@@ -291,7 +291,7 @@ const VendorConfiguration = () => {
                   name="minOrderAmount"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Minimum Order Amount ($)</FormLabel>
+                      <FormLabel>Minimum Order Amount (₹)</FormLabel>
                       <FormControl>
                         <Input
                           type="number"

@@ -101,7 +101,7 @@ const AccountPage = () => {
   const recentActivity = [
     {
       action: "Order placed",
-      details: "Order #BS-123456 for $89.99",
+      details: "Order #BS-123456 for ₹89.99",
       time: "2 hours ago",
     },
     {
@@ -221,7 +221,7 @@ const AccountPage = () => {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Total spent:</span>
-                    <span>$1,234.56</span>
+                    <span>₹1,234.56</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Loyalty points:</span>

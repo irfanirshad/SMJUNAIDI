@@ -93,7 +93,7 @@ const LeftSideBar: React.FC<SidebarProps> = ({ isOpen, onClose }) => {
                   onClick={onClose}
                 >
                   <Tag size={18} />
-                  <span>Under $50</span>
+                  <span>Under ₹50</span>
                 </Link>
               </div>
             </div>

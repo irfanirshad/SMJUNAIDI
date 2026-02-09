@@ -700,7 +700,7 @@ const ShopPageClient = ({ categories, brands }: Props) => {
                             key={`${min}-${max}`}
                             value={`${min}-${max}`}
                           >
-                            ${min} - {max === Infinity ? "Above" : `$${max}`}
+                            ₹{min} - {max === Infinity ? "Above" : `₹${max}`}
                           </SelectItem>
                         ))}
                       </SelectGroup>

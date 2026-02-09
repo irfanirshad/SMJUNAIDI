@@ -286,8 +286,8 @@ const InvoicePage: React.FC = () => {
                   <tr>
                     <td>${item.product.name}</td>
                     <td>${item.quantity}</td>
-                    <td>$${item.price.toFixed(2)}</td>
-                    <td>$${(item.quantity * item.price).toFixed(2)}</td>
+                    <td>₹${item.price.toFixed(2)}</td>
+                    <td>₹${(item.quantity * item.price).toFixed(2)}</td>
                   </tr>
                 `
                   )
@@ -298,19 +298,19 @@ const InvoicePage: React.FC = () => {
             <table class="totals">
               <tr>
                 <td>Subtotal:</td>
-                <td>$${invoiceData.order.totalAmount.toFixed(2)}</td>
+                <td>₹${invoiceData.order.totalAmount.toFixed(2)}</td>
               </tr>
               <tr>
                 <td>Tax:</td>
-                <td>$0.00</td>
+                <td>₹0.00</td>
               </tr>
               <tr>
                 <td>Shipping:</td>
-                <td>$0.00</td>
+                <td>₹0.00</td>
               </tr>
               <tr class="total-row">
                 <td>Total:</td>
-                <td>$${invoiceData.order.totalAmount.toFixed(2)}</td>
+                <td>₹${invoiceData.order.totalAmount.toFixed(2)}</td>
               </tr>
             </table>
 
@@ -334,7 +334,7 @@ const InvoicePage: React.FC = () => {
 
     const shareText = `Invoice ${
       invoiceData.invoiceNumber
-    } from Babymart - Total: $${invoiceData.order.totalAmount.toFixed(2)}`;
+    } from Babymart - Total: ₹${invoiceData.order.totalAmount.toFixed(2)}`;
     const shareUrl = window.location.href;
 
     switch (platform) {

@@ -186,7 +186,7 @@ const ProductDetails = async ({
                       Free Shipping & Returns
                     </p>
                     <p className="text-sm text-babyshopTextLight mt-0.5">
-                      On all orders over $200.00
+                      On all orders over ₹200.00
                     </p>
                   </div>
                 </div>

@@ -282,7 +282,7 @@ const OrdersPageContent = () => {
           name: item.name,
           description: `Quantity: ${item.quantity}`,
           amount: Math.round(item.price * 100),
-          currency: "usd",
+          currency: "inr",
           quantity: item.quantity,
           images: item.image ? [item.image] : undefined,
         })
@@ -297,7 +297,7 @@ const OrdersPageContent = () => {
           name: "Shipping",
           description: "Standard shipping",
           amount: Math.round(shipping * 100),
-          currency: "usd",
+          currency: "inr",
           quantity: 1,
         });
       }
@@ -307,7 +307,7 @@ const OrdersPageContent = () => {
           name: "Tax",
           description: "Sales tax",
           amount: Math.round(tax * 100),
-          currency: "usd",
+          currency: "inr",
           quantity: 1,
         });
       }
@@ -385,9 +385,9 @@ const OrdersPageContent = () => {
   };
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("en-IN", {
       style: "currency",
-      currency: "USD",
+      currency: "INR",
     }).format(price);
   };
 
