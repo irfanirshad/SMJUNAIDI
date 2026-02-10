@@ -1,23 +1,16 @@
 /**
- * Format price to USD currency format
+ * Format price to INR currency format using the shared currency symbol.
  * @param price - The price amount to format
- * @param currency - The currency code (default: 'USD')
- * @returns Formatted price string (e.g., "$123.45")
+ * @returns Formatted price string (e.g., "₹123.45")
  */
-export const formatPrice = (
-  price: number | undefined,
-  currency: string = 'USD',
-): string => {
+import { CURRENCY_SYMBOL } from '../config/environment';
+
+export const formatPrice = (price: number | undefined): string => {
   if (price === undefined || price === null || isNaN(price)) {
-    return '$0.00';
+    return `${CURRENCY_SYMBOL}0.00`;
   }
 
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currency,
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(price);
+  return `${CURRENCY_SYMBOL}${price.toFixed(2)}`;
 };
 
 /**

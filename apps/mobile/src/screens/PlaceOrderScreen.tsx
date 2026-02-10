@@ -18,7 +18,11 @@ import { useAuth } from '../hooks/useAuth';
 import { useCart } from '../hooks/useCart';
 import { useOrders } from '../hooks/useOrders';
 import { orderAPI } from '../services/api';
-import { TAX_AMOUNT, calculateShippingCost } from '../config/environment';
+import {
+  TAX_AMOUNT,
+  calculateShippingCost,
+  formatPrice,
+} from '../config/environment';
 
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { CreditCardIcon, ShoppingBag01Icon } from '@hugeicons/core-free-icons';
@@ -27,14 +31,13 @@ type PlaceOrderScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
   'PlaceOrder'
 >;
-
 interface Props {
   navigation: PlaceOrderScreenNavigationProp;
 }
 
 const PlaceOrderScreen: React.FC<Props> = ({ navigation }) => {
   const { user, refreshUser } = useAuth();
-  const { cartItemsWithQuantities, clearCart } = useCart();
+  const { cartItemsWithQuantities } = useCart();
   const { addOrder } = useOrders();
   const auth_token = user?.token;
 
@@ -158,6 +161,7 @@ const PlaceOrderScreen: React.FC<Props> = ({ navigation }) => {
           image: item.product.image,
         })),
         shippingAddress: selectedAddress,
+        paymentMethod: 'razorpay',
       };
 
       const response = await orderAPI.createOrder(auth_token, orderData);
@@ -169,14 +173,11 @@ const PlaceOrderScreen: React.FC<Props> = ({ navigation }) => {
         addOrder(response.order);
         console.log('📦 Order added to store:', response.order._id);
 
-        // Clear cart after successful order creation
-        await clearCart();
-        console.log(
-          '🛒 Cart cleared, navigating to checkout with orderId:',
-          response.order._id,
-        );
-        // Navigate to checkout screen
-        navigation.navigate('Checkout', { orderId: response.order._id });
+        // Navigate to checkout screen for payment
+        navigation.navigate('Checkout', {
+          orderId: response.order._id,
+          paymentMethod: 'razorpay',
+        });
       } else {
         Alert.alert(
           'Order Failed',
@@ -227,27 +228,26 @@ const PlaceOrderScreen: React.FC<Props> = ({ navigation }) => {
                     item.product.originalPrice > item.product.price ? (
                       <View style={styles.priceRow}>
                         <Text style={styles.originalPrice}>
-                          ${item.product.originalPrice.toFixed(2)}
+                          {formatPrice(item.product.originalPrice)}
                         </Text>
                         <Text style={[styles.itemPrice, styles.salePrice]}>
-                          ${item.product.price.toFixed(2)} x {item.quantity}
+                          {formatPrice(item.product.price)} x {item.quantity}
                         </Text>
                       </View>
                     ) : (
                       <Text style={styles.itemPrice}>
-                        ${item.product.price.toFixed(2)} x {item.quantity}
+                        {formatPrice(item.product.price)} x {item.quantity}
                       </Text>
                     )}
                   </View>
                 </View>
                 <Text style={styles.itemTotal}>
-                  ${(item.product.price * item.quantity).toFixed(2)}
+                  {formatPrice(item.product.price * item.quantity)}
                 </Text>
               </View>
             ))}
           </View>
         </View>
-
         {/* Payment Method Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Payment Method</Text>
@@ -258,7 +258,7 @@ const PlaceOrderScreen: React.FC<Props> = ({ navigation }) => {
               color={colors.babyshopSky}
               strokeWidth={2}
             />
-            <Text style={styles.paymentText}>Stripe (Credit/Debit Card)</Text>
+            <Text style={styles.paymentText}>Razorpay (UPI / Cards)</Text>
           </View>
         </View>
 
@@ -269,23 +269,21 @@ const PlaceOrderScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Subtotal</Text>
               <Text style={styles.summaryValue}>
-                ${orderSummary.subtotal.toFixed(2)}
+                {formatPrice(orderSummary.subtotal)}
               </Text>
             </View>
             {orderSummary.discount > 0 && (
               <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, styles.discountLabel]}>
-                  Discount
-                </Text>
+                <Text style={styles.summaryLabel}>Discount</Text>
                 <Text style={[styles.summaryValue, styles.discountValue]}>
-                  -${orderSummary.discount.toFixed(2)}
+                  -{formatPrice(orderSummary.discount)}
                 </Text>
               </View>
             )}
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Tax</Text>
               <Text style={styles.summaryValue}>
-                ${orderSummary.taxPrice.toFixed(2)}
+                {formatPrice(orderSummary.taxPrice)}
               </Text>
             </View>
             <View style={styles.summaryRow}>
@@ -298,19 +296,18 @@ const PlaceOrderScreen: React.FC<Props> = ({ navigation }) => {
               >
                 {orderSummary.shippingPrice === 0
                   ? 'FREE'
-                  : `$${orderSummary.shippingPrice.toFixed(2)}`}
+                  : formatPrice(orderSummary.shippingPrice)}
               </Text>
             </View>
 
             <View style={[styles.summaryRow, styles.totalRow]}>
               <Text style={styles.totalLabel}>Total</Text>
               <Text style={styles.totalValue}>
-                ${orderSummary.totalPrice.toFixed(2)}
+                {formatPrice(orderSummary.totalPrice)}
               </Text>
             </View>
           </View>
         </View>
-      </ScrollView>
 
       {/* Place Order Button */}
       <View style={styles.bottomContainer}>
@@ -343,13 +340,14 @@ const PlaceOrderScreen: React.FC<Props> = ({ navigation }) => {
                 strokeWidth={2}
               />
               <Text style={styles.buttonText}>
-                Place Order - ${orderSummary.totalPrice.toFixed(2)}
+                Continue to Checkout - {formatPrice(orderSummary.totalPrice)}
               </Text>
             </View>
           )}
         </TouchableOpacity>
       </View>
-    </View>
+    </ScrollView>
+  </View>
   );
 };
 

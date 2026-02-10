@@ -652,6 +652,7 @@ export const orderAPI = {
         image: string;
       }[];
       shippingAddress: Address;
+      paymentMethod?: string;
     },
   ): Promise<{ success: boolean; order?: Order; message: string }> => {
     try {
@@ -660,6 +661,7 @@ export const orderAPI = {
       const payload = {
         items: orderData.items,
         shippingAddress: orderData.shippingAddress,
+        paymentMethod: orderData.paymentMethod,
       };
 
       const response = await makeRequest('/orders', {
@@ -1116,6 +1118,88 @@ export const paymentAPI = {
           error instanceof Error
             ? error.message
             : 'Failed to initialize SSLCommerz payment',
+      };
+    }
+  },
+
+  // Create Razorpay order
+  createRazorpayPaymentOrder: async (
+    token: string,
+    orderId: string,
+    amount: number,
+    currency?: string,
+  ): Promise<
+    | {
+        success: true;
+        orderId: string;
+        amount: number;
+        currency: string;
+        keyId: string;
+      }
+    | { success: false; message: string }
+  > => {
+    try {
+      const data = await makeRequest('/payments/razorpay/order', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ orderId, amount, currency }),
+      });
+
+      return {
+        success: true,
+        orderId: data.orderId,
+        amount: data.amount,
+        currency: data.currency,
+        keyId: data.keyId,
+      };
+    } catch (error) {
+      console.error('❌ Create Razorpay order error:', error);
+      return {
+        success: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Failed to create Razorpay order',
+      };
+    }
+  },
+
+  // Verify Razorpay payment
+  verifyRazorpayPayment: async (
+    token: string,
+    orderId: string,
+    payload: {
+      razorpayOrderId: string;
+      razorpayPaymentId: string;
+      razorpaySignature: string;
+    },
+  ): Promise<{ success: boolean; order?: Order; message?: string }> => {
+    try {
+      const data = await makeRequest('/payments/razorpay/verify', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ orderId, ...payload }),
+      });
+
+      return {
+        success: true,
+        order: data.order,
+        message: data.message,
+      };
+    } catch (error) {
+      console.error('❌ Verify Razorpay payment error:', error);
+      return {
+        success: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Failed to verify Razorpay payment',
       };
     }
   },

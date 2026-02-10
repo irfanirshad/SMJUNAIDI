@@ -18,6 +18,7 @@ import { useCart } from '../hooks/useCart';
 import { Product, Category, Brand } from '../../types';
 import colors from '../constants/colors';
 import CommonNavbar from '../components/common/CommonNavbar';
+import { formatPrice } from '../config/environment';
 import { HomeProductRender } from '../components/renderItems/home-product';
 import ProductSkeleton from '../components/skeletons/ProductSkeleton';
 
@@ -88,7 +89,9 @@ const ProductListScreen: React.FC<any> = ({ navigation, route }) => {
     }
 
     if (priceMin || priceMax) {
-      filters.push(`$${priceMin || '0'} - $${priceMax || '∞'}`);
+      const minPrice = formatPrice(Number(priceMin || 0));
+      const maxPrice = priceMax ? formatPrice(Number(priceMax)) : '∞';
+      filters.push(`${minPrice} - ${maxPrice}`);
     }
 
     if (searchQuery) {

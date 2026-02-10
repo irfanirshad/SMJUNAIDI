@@ -15,10 +15,13 @@ import { RootStackParamList } from '../../types';
 import colors from '../constants/colors';
 import CommonNavbar from '../components/common/CommonNavbar';
 import { useCart } from '../hooks/useCart';
+import { useAuth } from '../hooks/useAuth';
+import { orderAPI } from '../services/api';
 import {
   TAX_AMOUNT,
   FREE_DELIVERY_THRESHOLD,
   SHIPPING_FEE,
+  formatPrice,
 } from '../config/environment';
 
 import { HugeiconsIcon } from '@hugeicons/react-native';
@@ -49,8 +52,10 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
     clearCart,
     isLoading,
   } = useCart();
-
+  const { user } = useAuth();
   const { showToast } = useToast();
+
+  const [isPlacingOrder, setIsPlacingOrder] = React.useState(false);
 
   // Animation values
   const fadeAnim = React.useRef(new Animated.Value(0)).current;
@@ -141,6 +146,85 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
+  const handleCheckout = async () => {
+    if (cartItemsWithQuantities.length === 0) {
+      Alert.alert(
+        'Empty Cart',
+        'Please add some items to your cart before placing an order.',
+      );
+      return;
+    }
+
+    if (!user?.token) {
+      Alert.alert('Login Required', 'Please log in to place an order.', [
+        {
+          text: 'Go to Login',
+          onPress: () => navigation.navigate('Login'),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+      return;
+    }
+
+    const defaultAddress =
+      user.addresses?.find(addr => addr.isDefault) || user.addresses?.[0];
+
+    if (!defaultAddress) {
+      Alert.alert(
+        'Add Shipping Address',
+        'Please add a shipping address to continue to checkout.',
+        [
+          {
+            text: 'Add Address',
+            onPress: () => navigation.navigate('PlaceOrder'),
+          },
+          { text: 'Cancel', style: 'cancel' },
+        ],
+      );
+      return;
+    }
+
+    setIsPlacingOrder(true);
+
+    try {
+      const orderData = {
+        items: cartItemsWithQuantities.map(item => ({
+          _id: item.product._id,
+          name: item.product.name,
+          price: item.product.price,
+          quantity: item.quantity,
+          image: item.product.image,
+        })),
+        shippingAddress: defaultAddress,
+        paymentMethod: 'razorpay',
+      };
+
+      const response = await orderAPI.createOrder(user.token, orderData);
+
+      if (response.success && response.order) {
+        navigation.navigate('Checkout', {
+          orderId: response.order._id,
+          paymentMethod: 'razorpay',
+        });
+      } else {
+        Alert.alert(
+          'Order Failed',
+          response.message || 'Failed to place order. Please try again.',
+        );
+      }
+    } catch (error) {
+      console.error('Cart checkout error:', error);
+      Alert.alert(
+        'Error',
+        error instanceof Error
+          ? error.message
+          : 'An unexpected error occurred. Please try again.',
+      );
+    } finally {
+      setIsPlacingOrder(false);
+    }
+  };
+
   const renderCartItem = (item: any, _index: number) => (
     <Animated.View
       key={item.product._id}
@@ -160,13 +244,13 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
             {item.product.name}
           </Text>
           <Text style={styles.itemTotal}>
-            ${(item.product.price * item.quantity).toFixed(2)}
+            {formatPrice(item.product.price * item.quantity)}
           </Text>
         </View>
 
         <View style={styles.priceContainer}>
           <Text style={styles.productPrice}>
-            ${item.product.price.toFixed(2)}
+            {formatPrice(item.product.price)}
           </Text>
         </View>
 
@@ -263,7 +347,7 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
 
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Subtotal ({cartCount} items)</Text>
-          <Text style={styles.summaryValue}>${subtotal.toFixed(2)}</Text>
+          <Text style={styles.summaryValue}>{formatPrice(subtotal)}</Text>
         </View>
 
         <View style={styles.summaryRow}>
@@ -271,25 +355,25 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
           <Text
             style={[styles.summaryValue, shippingFee === 0 && styles.freeText]}
           >
-            {shippingFee === 0 ? 'FREE' : `$${shippingFee.toFixed(2)}`}
+            {shippingFee === 0 ? 'FREE' : formatPrice(shippingFee)}
           </Text>
         </View>
 
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>Tax</Text>
-          <Text style={styles.summaryValue}>$0.00</Text>
+          <Text style={styles.summaryValue}>{formatPrice(tax)}</Text>
         </View>
 
         <View style={styles.summaryDivider} />
 
         <View style={styles.summaryRow}>
           <Text style={styles.totalLabel}>Total</Text>
-          <Text style={styles.totalValue}>${finalTotal.toFixed(2)}</Text>
+          <Text style={styles.totalValue}>{formatPrice(finalTotal)}</Text>
         </View>
 
         {subtotal < FREE_DELIVERY_THRESHOLD && (
           <Text style={styles.freeShippingNote}>
-            Add ${(FREE_DELIVERY_THRESHOLD - subtotal).toFixed(2)} more for free
+            Add {formatPrice(FREE_DELIVERY_THRESHOLD - subtotal)} more for free
             shipping!
           </Text>
         )}
@@ -297,38 +381,26 @@ const CartScreen: React.FC<Props> = ({ navigation }) => {
         <TouchableOpacity
           style={[
             styles.checkoutButton,
-            (isLoading || cartItemsWithQuantities.length === 0) &&
+            (isLoading || isPlacingOrder || cartItemsWithQuantities.length === 0) &&
               styles.disabledButton,
           ]}
-          onPress={() => {
-            if (cartItemsWithQuantities.length === 0) {
-              Alert.alert(
-                'Empty Cart',
-                'Please add some items to your cart before placing an order.',
-              );
-              return;
-            }
-
-            if (totalPrice <= 0) {
-              Alert.alert(
-                'Invalid Order',
-                'Order total must be greater than $0.',
-              );
-              return;
-            }
-
-            navigation.navigate('PlaceOrder');
-          }}
-          disabled={isLoading || cartItemsWithQuantities.length === 0}
+          onPress={handleCheckout}
+          disabled={
+            isLoading || isPlacingOrder || cartItemsWithQuantities.length === 0
+          }
         >
           <Text
             style={[
               styles.checkoutButtonText,
-              (isLoading || cartItemsWithQuantities.length === 0) &&
+              (isLoading || isPlacingOrder || cartItemsWithQuantities.length === 0) &&
                 styles.disabledButtonText,
             ]}
           >
-            {isLoading ? 'Processing...' : 'Place Order'}
+            {isPlacingOrder
+              ? 'Processing...'
+              : isLoading
+              ? 'Updating...'
+              : `Place Order - ${formatPrice(finalTotal)}`}
           </Text>
         </TouchableOpacity>
       </Animated.View>

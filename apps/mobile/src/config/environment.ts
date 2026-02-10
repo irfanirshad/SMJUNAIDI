@@ -8,7 +8,7 @@ const isDevelopment = __DEV__;
 
 // Optional manual override: set your dev machine LAN IP so physical devices can reach it.
 // Example override: '192.168.1.4'
-const DEV_HOST_OVERRIDE = '192.168.48.204';    /// pc IP address from wifi lan connected.
+const DEV_HOST_OVERRIDE = '192.168.1.17';    /// pc IP address from wifi lan connected.
 
 // Use Metro bundle host when available so physical devices hit your dev box over LAN.
 const getDevHost = () => {
@@ -43,6 +43,12 @@ export const API_CONFIG = {
 export const TAX_AMOUNT = 0; // No tax applied
 export const FREE_DELIVERY_THRESHOLD = 999; // Free delivery above this amount
 export const SHIPPING_FEE = 50; // Standard shipping fee
+export const CURRENCY_SYMBOL = '₹';
+
+export const formatPrice = (
+  amount: number,
+  fractionDigits: number = 2,
+): string => `${CURRENCY_SYMBOL}${amount.toFixed(fractionDigits)}`;
 
 // Calculate shipping cost based on cart total
 export const calculateShippingCost = (cartTotal: number): number => {
@@ -80,6 +86,11 @@ export const STRIPE_PUBLISHABLE_KEY = isDevelopment
   ? ''
   : ''; // Replace with actual live key
 
+// Razorpay Configuration
+export const RAZORPAY_KEY_ID = isDevelopment
+  ? ''
+  : ''; // Set your Razorpay key ID for the respective environment
+
 // Firebase Configuration
 export const FIREBASE_CONFIG = {
   apiKey: '',
@@ -115,8 +126,10 @@ export default {
   TAX_AMOUNT,
   FREE_DELIVERY_THRESHOLD,
   SHIPPING_FEE,
+  CURRENCY_SYMBOL,
   AVAILABLE_COUNTRIES,
   STRIPE_PUBLISHABLE_KEY,
+  RAZORPAY_KEY_ID,
   FIREBASE_CONFIG,
   SHOW_CONSOLE_WARNING,
   APP_ENV,

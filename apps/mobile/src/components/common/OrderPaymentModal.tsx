@@ -20,6 +20,7 @@ import { useOrderStore } from '../../store';
 import { usePaymentSheet } from '@stripe/stripe-react-native';
 import SSLCommerzWebView from './SSLCommerzWebView';
 import { Order, RootStackParamList } from '../../../types';
+import { formatPrice } from '../../config/environment';
 
 type NavigationProp = StackNavigationProp<RootStackParamList>;
 
@@ -136,8 +137,8 @@ const OrderPaymentModal: React.FC<Props> = ({
       if (orderStatusUpdated) {
         Alert.alert(
           'Payment Successful! 🎉',
-          `Your payment of $${getTotalPrice(order).toFixed(
-            2,
+          `Your payment of ${formatPrice(
+            getTotalPrice(order),
           )} has been processed successfully. Your order is now confirmed.`,
           [
             {
@@ -155,8 +156,8 @@ const OrderPaymentModal: React.FC<Props> = ({
       } else {
         Alert.alert(
           'Payment Successful ✅',
-          `Your payment of $${getTotalPrice(order).toFixed(
-            2,
+          `Your payment of ${formatPrice(
+            getTotalPrice(order),
           )} has been processed successfully. However, there was an issue updating your order status. Your order will be updated shortly.`,
           [
             {

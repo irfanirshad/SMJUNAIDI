@@ -22,6 +22,7 @@ import {
 import { useAuth } from '../hooks/useAuth';
 import { vendorAPI } from '../services/api';
 import { Product } from '../../types';
+import { formatPrice } from '../config/environment';
 
 interface VendorStats {
   totalProducts: number;
@@ -92,7 +93,7 @@ const VendorDashboardScreen: React.FC<any> = ({ navigation }) => {
     {
       icon: DollarCircleIcon,
       label: 'Revenue',
-      value: `$${stats?.totalRevenue.toFixed(2) || '0.00'}`,
+      value: formatPrice(stats?.totalRevenue || 0),
     },
     {
       icon: InformationCircleIcon,
@@ -185,7 +186,7 @@ const VendorDashboardScreen: React.FC<any> = ({ navigation }) => {
                       </Text>
                       <View style={styles.productFooter}>
                         <Text style={styles.productPrice}>
-                          ${product.price.toFixed(2)}
+                          {formatPrice(product.price)}
                         </Text>
                         <Text style={styles.productStock}>
                           Stock: {product.stock}

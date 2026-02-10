@@ -25,6 +25,7 @@ import {
   ArrowLeft01Icon,
   ArrowRight01Icon,
 } from '@hugeicons/core-free-icons';
+import { formatPrice } from '../config/environment';
 
 const { width, height } = Dimensions.get('window');
 
@@ -241,7 +242,7 @@ const SingleProductScreen: React.FC<Props> = ({ navigation, route }) => {
         <View style={styles.contentContainer}>
           <View style={styles.headerSection}>
             <Text style={styles.productName}>{product.name}</Text>
-            <Text style={styles.productPrice}>${product.price}</Text>
+            <Text style={styles.productPrice}>{formatPrice(product.price)}</Text>
           </View>
 
           <View style={styles.metaSection}>

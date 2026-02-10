@@ -23,6 +23,7 @@ import {
   ShoppingBag02Icon,
   FavouriteIcon,
 } from '@hugeicons/core-free-icons';
+import { formatPrice } from '../config/environment';
 
 type WishlistScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -161,14 +162,14 @@ const WishlistScreen: React.FC<Props> = ({ navigation }) => {
             {item.discountPercentage && item.discountPercentage > 0 ? (
               <>
                 <Text style={styles.originalPrice}>
-                  ${item.price.toFixed(2)}
+                  {formatPrice(item.price)}
                 </Text>
                 <Text style={styles.discountedPrice}>
-                  ${discountedPrice.toFixed(2)}
+                  {formatPrice(discountedPrice)}
                 </Text>
               </>
             ) : (
-              <Text style={styles.price}>${item.price.toFixed(2)}</Text>
+              <Text style={styles.price}>{formatPrice(item.price)}</Text>
             )}
           </View>
 

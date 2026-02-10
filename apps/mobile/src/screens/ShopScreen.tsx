@@ -18,6 +18,7 @@ import { Product, Category, Brand } from '../../types';
 import colors from '../constants/colors';
 import CommonNavbar from '../components/common/CommonNavbar';
 import { HomeProductRender } from '../components/renderItems/home-product';
+import { formatPrice } from '../config/environment';
 import ProductSkeleton from '../components/skeletons/ProductSkeleton';
 
 const PER_PAGE = 20;
@@ -82,7 +83,9 @@ const ShopScreen: React.FC<any> = ({ navigation }) => {
     }
 
     if (priceMin || priceMax) {
-      filters.push(`$${priceMin || '0'} - $${priceMax || '∞'}`);
+      const minPrice = formatPrice(Number(priceMin || 0));
+      const maxPrice = priceMax ? formatPrice(Number(priceMax)) : '∞';
+      filters.push(`${minPrice} - ${maxPrice}`);
     }
 
     if (searchQuery) {

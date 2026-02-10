@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { HomeScreenNavigationProp, Product } from '../../../types';
 import colors from '../../constants/colors';
+import { formatPrice } from '../../config/environment';
 
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { FavouriteIcon } from '@hugeicons/core-free-icons';
@@ -87,13 +88,17 @@ const HomeProductRender: React.FC<Props> = ({
         <View style={styles.priceContainer}>
           {hasDiscount ? (
             <>
-              <Text style={styles.originalPrice}>${item.price.toFixed(2)}</Text>
+              <Text style={styles.originalPrice}>
+                {formatPrice(item.price)}
+              </Text>
               <Text style={styles.discountedPrice}>
-                ${discountedPrice.toFixed(2)}
+                {formatPrice(discountedPrice)}
               </Text>
             </>
           ) : (
-            <Text style={styles.currentPrice}>${item.price.toFixed(2)}</Text>
+            <Text style={styles.currentPrice}>
+              {formatPrice(item.price)}
+            </Text>
           )}
         </View>
 

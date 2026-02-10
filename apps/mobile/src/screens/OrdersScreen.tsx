@@ -17,6 +17,7 @@ import OrderPaymentModal from '../components/common/OrderPaymentModal';
 import { useCart } from '../hooks/useCart';
 import { useOrders } from '../hooks/useOrders';
 import { useAuth } from '../hooks/useAuth';
+import { formatPrice } from '../config/environment';
 
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import {
@@ -220,7 +221,7 @@ const OrdersScreen: React.FC<Props> = ({ navigation }) => {
             <View style={styles.totalContainer}>
               <Text style={styles.totalLabel}>Total</Text>
               <Text style={styles.totalAmount}>
-                ${getTotalPrice(order).toFixed(2)}
+                {formatPrice(getTotalPrice(order))}
               </Text>
             </View>
           </View>

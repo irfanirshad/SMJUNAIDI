@@ -14,12 +14,12 @@ import { RouteProp } from '@react-navigation/native';
 import { RootStackParamList, Order } from '../../types';
 import colors from '../constants/colors';
 import CommonNavbar from '../components/common/CommonNavbar';
-import PaymentMethodModal from '../components/common/PaymentMethodModal';
-import SSLCommerzWebView from '../components/common/SSLCommerzWebView';
 import { useAuth } from '../hooks/useAuth';
+import { useCart } from '../hooks/useCart';
 import { orderAPI, paymentAPI } from '../services/api';
 import { useOrderStore } from '../store';
-import { usePaymentSheet } from '@stripe/stripe-react-native';
+import RazorpayCheckout from 'react-native-razorpay';
+import { RAZORPAY_KEY_ID, formatPrice } from '../config/environment';
 
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import {
@@ -29,6 +29,12 @@ import {
   CalendarIcon,
   ShoppingBag01Icon,
 } from '@hugeicons/core-free-icons';
+
+type RazorpaySuccessResponse = {
+  razorpay_payment_id: string;
+  razorpay_order_id: string;
+  razorpay_signature: string;
+};
 
 type CheckoutScreenNavigationProp = StackNavigationProp<
   RootStackParamList,
@@ -43,18 +49,15 @@ interface Props {
 }
 
 const CheckoutScreen: React.FC<Props> = ({ navigation, route }) => {
-  const { orderId } = route.params;
+  const { orderId, paymentMethod } = route.params;
   const { user } = useAuth();
+  const { clearCart } = useCart();
   const { syncOrdersFromServer } = useOrderStore();
-  const { initPaymentSheet, presentPaymentSheet } = usePaymentSheet();
   const auth_token = user?.token;
 
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  const [showPaymentMethodModal, setShowPaymentMethodModal] = useState(false);
-  const [showSSLCommerzWebView, setShowSSLCommerzWebView] = useState(false);
-  const [sslCommerzPaymentUrl, setSSLCommerzPaymentUrl] = useState('');
 
   // Helper functions to handle both server and client order formats
   const getOrderItems = (orderData: Order) => {
@@ -107,7 +110,11 @@ const CheckoutScreen: React.FC<Props> = ({ navigation, route }) => {
         const response = await orderAPI.getOrderById(auth_token, orderId);
 
         if (response.success && response.order) {
-          setOrder(response.order);
+          setOrder({
+            ...response.order,
+            paymentMethod:
+              response.order.paymentMethod || paymentMethod || 'razorpay',
+          });
         } else {
           console.error('❌ Order fetch failed:', response.message);
 
@@ -165,272 +172,119 @@ const CheckoutScreen: React.FC<Props> = ({ navigation, route }) => {
     }
   }, [orderId, auth_token, navigation]);
 
-  const handlePayNow = async () => {
-    if (!order || !auth_token) return;
-
-    // Show payment method selection modal
-    setShowPaymentMethodModal(true);
-  };
-
-  const handlePaymentMethodSelect = async (method: 'stripe' | 'sslcommerz') => {
-    if (method === 'stripe') {
-      await handleStripePayment();
-    } else if (method === 'sslcommerz') {
-      await handleSSLCommerzPayment();
-    }
-  };
-
-  const handleStripePayment = async () => {
-    if (!order || !auth_token) return;
-
-    setIsProcessingPayment(true);
-
-    try {
-      // Step 1: Create payment intent on the server
-      const paymentIntentResponse = await paymentAPI.createPaymentIntent(
-        auth_token,
-        order._id,
-        getTotalPrice(order),
-        'usd',
-      );
-
-      if (!paymentIntentResponse.success) {
-        throw new Error(
-          paymentIntentResponse.message || 'Failed to create payment intent',
-        );
-      }
-
-      // Step 2: Initialize the payment sheet
-      const { error: initError } = await initPaymentSheet({
-        merchantDisplayName: 'Baby Shop',
-        paymentIntentClientSecret: paymentIntentResponse.clientSecret!,
-        defaultBillingDetails: {
-          name: user?.name || 'Customer',
-          email: user?.email || '',
-        },
-        returnURL: 'babyshop://payment-complete',
-      });
-
-      if (initError) {
-        throw new Error(initError.message || 'Failed to initialize payment');
-      }
-
-      // Step 3: Present the payment sheet
-      const { error: paymentError } = await presentPaymentSheet();
-
-      if (paymentError) {
-        throw new Error(paymentError.message || 'Payment was declined');
-      }
-
-      // Payment succeeded - now update order payment status
-      let orderStatusUpdated = false;
-
-      try {
-        // Step 4: Update order payment status to paid
-        const updateResponse = await orderAPI.updateOrderPaymentStatus(
-          auth_token,
-          order._id,
-          'paid',
-          paymentIntentResponse.paymentIntentId || 'pi_demo_' + Date.now(),
-        );
-
-        if (updateResponse.success) {
-          orderStatusUpdated = true;
-          // Update local order state to reflect paid status
-          setOrder(prev =>
-            prev
-              ? {
-                  ...prev,
-                  paymentStatus: 'paid',
-                  isPaid: true,
-                  paidAt: new Date(),
-                }
-              : null,
-          );
-
-          // Sync orders to update the real-time order count and status
-          await syncOrdersFromServer();
-        } else {
-          console.error(
-            '❌ Payment status update failed:',
-            updateResponse.message,
-          );
-        }
-      } catch (error) {
-        console.error('❌ Payment status update error:', error);
-      }
-
-      // Show appropriate success message even if order status update failed
-      // (since payment was successful)
-      if (orderStatusUpdated) {
-        Alert.alert(
-          'Payment Successful! 🎉',
-          `Your payment of $${getTotalPrice(order).toFixed(
-            2,
-          )} has been processed successfully. Your order is now confirmed.`,
-          [
-            {
-              text: 'View Order',
-              onPress: () => {
-                navigation.navigate('SingleOrder', { orderId: order._id });
-              },
-            },
-            {
-              text: 'Continue Shopping',
-              onPress: () => {
-                navigation.navigate('MainTabs');
-              },
-            },
-          ],
-        );
-      } else {
-        // Payment succeeded but order status update failed
-        Alert.alert(
-          'Payment Successful ✅',
-          `Your payment of $${getTotalPrice(order).toFixed(
-            2,
-          )} has been processed successfully. However, there was an issue updating your order status. Your order will be updated shortly. 
-
-Order ID: ${order._id.slice(-8).toUpperCase()}`,
-          [
-            {
-              text: 'View Order',
-              onPress: () => {
-                navigation.navigate('SingleOrder', { orderId: order._id });
-              },
-            },
-            {
-              text: 'Continue Shopping',
-              onPress: () => {
-                navigation.navigate('MainTabs');
-              },
-            },
-          ],
-        );
-
-        // Try to sync orders in background to get updated status from webhook
-        try {
-          await syncOrdersFromServer();
-        } catch (syncError) {
-          console.error('Background sync failed:', syncError);
-        }
-      }
-    } catch (error) {
-      console.error('💥 Payment error:', error);
-
-      Alert.alert(
-        'Payment Failed',
-        error instanceof Error
-          ? error.message
-          : 'There was an issue processing your payment. Please try again or use a different payment method.',
-        [
-          {
-            text: 'Try Again',
-            style: 'default',
-          },
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-        ],
-      );
-    } finally {
-      setIsProcessingPayment(false);
-    }
-  };
-
-  const handleSSLCommerzPayment = async () => {
+  const startRazorpayPayment = async () => {
     if (!order || !auth_token) return;
 
     setIsProcessingPayment(true);
 
     try {
       const totalAmount = getTotalPrice(order);
+      const preferredCurrency =
+        (order.payment_info?.currency || 'INR').toUpperCase();
 
-      // Call SSLCommerz init API
-      const response = await paymentAPI.initSSLCommerzPayment(
+      const razorpayOrder = await paymentAPI.createRazorpayPaymentOrder(
         auth_token,
         order._id,
         totalAmount,
-        'BDT',
+        preferredCurrency,
       );
 
-      if (!response.success || !response.gatewayUrl) {
+      if (!razorpayOrder.success) {
         throw new Error(
-          response.message || 'Failed to initialize SSLCommerz payment',
+          'Failed to start Razorpay payment: ' +
+            ((razorpayOrder as { message?: string }).message || 'Unknown error'),
         );
       }
 
-      // Open WebView with SSLCommerz payment URL
-      setSSLCommerzPaymentUrl(response.gatewayUrl);
-      setShowSSLCommerzWebView(true);
-      setIsProcessingPayment(false);
-    } catch (error) {
-      console.error('💥 SSLCommerz payment error:', error);
+      const keyId = razorpayOrder.keyId || RAZORPAY_KEY_ID;
 
-      Alert.alert(
-        'Payment Failed',
-        error instanceof Error
-          ? error.message
-          : 'There was an issue initializing SSLCommerz payment. Please try again or use a different payment method.',
-        [
-          {
-            text: 'Try Again',
-            style: 'default',
-          },
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-        ],
+      if (!razorpayOrder.orderId || !razorpayOrder.amount) {
+        throw new Error('Invalid Razorpay order response: missing orderId/amount');
+      }
+
+      if (!keyId) {
+        throw new Error('Razorpay key is missing. Please set RAZORPAY_KEY_ID.');
+      }
+
+      const options = {
+        description: `Payment for order #${order._id
+          .slice(-8)
+          .toUpperCase()}`,
+        currency: razorpayOrder.currency || preferredCurrency,
+        key: keyId,
+        amount: Number(razorpayOrder.amount),
+        name: 'Babyshop',
+        order_id: razorpayOrder.orderId,
+        prefill: {
+          email: user?.email || '',
+          contact: '',
+          name: user?.name || 'Customer',
+        },
+        theme: { color: colors.babyshopSky },
+      };
+
+      if (!RazorpayCheckout || typeof RazorpayCheckout.open !== 'function') {
+        throw new Error(
+          'Razorpay SDK not initialized. Rebuild the app after installing react-native-razorpay.',
+        );
+      }
+
+      console.log('💳 Opening Razorpay checkout with options:', options);
+
+      const paymentResult =
+        (await RazorpayCheckout.open(options)) as RazorpaySuccessResponse;
+
+      console.log('✅ Razorpay payment result:', paymentResult);
+
+      const verification = await paymentAPI.verifyRazorpayPayment(
+        auth_token,
+        order._id,
+        {
+          razorpayOrderId: paymentResult.razorpay_order_id,
+          razorpayPaymentId: paymentResult.razorpay_payment_id,
+          razorpaySignature: paymentResult.razorpay_signature,
+        },
       );
-      setIsProcessingPayment(false);
-    }
-  };
 
-  const handleSSLCommerzSuccess = async () => {
-    setShowSSLCommerzWebView(false);
-    setIsProcessingPayment(true);
-
-    try {
-      // Update order payment status to paid
-      if (auth_token && order) {
-        console.log('💳 Updating order payment status to paid (SSLCommerz)...');
-        const updateResponse = await orderAPI.updateOrderPaymentStatus(
-          auth_token,
-          order._id,
-          'paid',
+      if (!verification.success) {
+        throw new Error(
+          verification.message || 'Payment verification failed on server',
         );
-
-        if (updateResponse.success) {
-          console.log('✅ Order payment status updated to paid');
-        } else {
-          console.error(
-            '❌ Payment status update failed:',
-            updateResponse.message,
-          );
-        }
       }
 
-      // Sync orders to get updated status from backend
+      if (verification.order) {
+        setOrder({
+          ...verification.order,
+          paymentMethod:
+            verification.order.paymentMethod || paymentMethod || 'razorpay',
+        });
+      } else {
+        setOrder(prev =>
+          prev
+            ? {
+                ...prev,
+                paymentStatus: 'paid',
+                isPaid: true,
+                paidAt: new Date(),
+                paymentMethod: 'razorpay',
+              }
+            : null,
+        );
+      }
+
       await syncOrdersFromServer();
-
-      // Fetch the latest order status
-      if (auth_token && order) {
-        const response = await orderAPI.getOrderById(auth_token, order._id);
-        if (response.success && response.order) {
-          setOrder(response.order);
-        }
-      }
+      await clearCart();
 
       Alert.alert(
         'Payment Successful! 🎉',
-        'Your payment has been processed successfully through SSLCommerz. Your order is now confirmed.',
+        `Your payment of ${formatPrice(
+          getTotalPrice(order),
+        )} was successful. Your order is now confirmed.`,
         [
           {
             text: 'View Order',
             onPress: () => {
-              navigation.navigate('SingleOrder', { orderId: order!._id });
+              navigation.navigate('SingleOrder', { orderId: order._id });
             },
           },
           {
@@ -442,60 +296,26 @@ Order ID: ${order._id.slice(-8).toUpperCase()}`,
         ],
       );
     } catch (error) {
-      console.error('Error refreshing order:', error);
-      Alert.alert(
-        'Payment Successful ✅',
-        'Your payment was successful! However, there was an issue refreshing your order. Please check your orders list.',
-        [
-          {
-            text: 'View Orders',
-            onPress: () => navigation.navigate('Orders'),
-          },
-        ],
-      );
+      console.error('💥 Razorpay payment error:', error);
+
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'There was an issue processing your payment. Please try again.';
+
+      Alert.alert('Payment Failed', message, [
+        {
+          text: 'Try Again',
+          onPress: () => startRazorpayPayment(),
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ]);
     } finally {
       setIsProcessingPayment(false);
     }
-  };
-
-  const handleSSLCommerzFailure = () => {
-    setShowSSLCommerzWebView(false);
-    setIsProcessingPayment(false);
-
-    Alert.alert(
-      'Payment Failed',
-      'Your payment was not successful. Please try again or use a different payment method.',
-      [
-        {
-          text: 'Try Again',
-          onPress: () => setShowPaymentMethodModal(true),
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-      ],
-    );
-  };
-
-  const handleSSLCommerzCancel = () => {
-    setShowSSLCommerzWebView(false);
-    setIsProcessingPayment(false);
-
-    Alert.alert(
-      'Payment Cancelled',
-      'You have cancelled the payment. Would you like to try again?',
-      [
-        {
-          text: 'Try Again',
-          onPress: () => setShowPaymentMethodModal(true),
-        },
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-      ],
-    );
   };
 
   const handleViewOrder = () => {
@@ -559,6 +379,8 @@ Order ID: ${order._id.slice(-8).toUpperCase()}`,
     );
   }
 
+  const isPaid = getIsPaid(order);
+
   return (
     <View style={styles.container}>
       <CommonNavbar title="Checkout" />
@@ -574,10 +396,17 @@ Order ID: ${order._id.slice(-8).toUpperCase()}`,
               strokeWidth={2}
             />
           </View>
-          <Text style={styles.statusTitle}>Order Placed Successfully!</Text>
+          <Text style={styles.statusTitle}>
+            {isPaid ? 'Payment Received' : 'Awaiting Payment'}
+          </Text>
           <Text style={styles.statusSubtitle}>
             Order ID: #{order._id.slice(-8).toUpperCase()}
           </Text>
+          {!isPaid && (
+            <Text style={styles.statusSubtle}>
+              Complete payment with Razorpay to confirm your order.
+            </Text>
+          )}
         </View>
 
         {/* Order Summary */}
@@ -587,12 +416,11 @@ Order ID: ${order._id.slice(-8).toUpperCase()}`,
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Subtotal</Text>
               <Text style={styles.summaryValue}>
-                $
-                {(
+                {formatPrice(
                   getTotalPrice(order) -
-                  getShippingPrice(order) -
-                  getTaxPrice(order)
-                ).toFixed(2)}
+                    getShippingPrice(order) -
+                    getTaxPrice(order),
+                )}
               </Text>
             </View>
             <View style={styles.summaryRow}>
@@ -605,19 +433,19 @@ Order ID: ${order._id.slice(-8).toUpperCase()}`,
               >
                 {getShippingPrice(order) === 0
                   ? 'FREE'
-                  : `$${getShippingPrice(order).toFixed(2)}`}
+                  : formatPrice(getShippingPrice(order))}
               </Text>
             </View>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Tax</Text>
               <Text style={styles.summaryValue}>
-                ${getTaxPrice(order).toFixed(2)}
+                {formatPrice(getTaxPrice(order))}
               </Text>
             </View>
             <View style={[styles.summaryRow, styles.totalRow]}>
               <Text style={styles.totalLabel}>Total</Text>
               <Text style={styles.totalValue}>
-                ${getTotalPrice(order).toFixed(2)}
+                {formatPrice(getTotalPrice(order))}
               </Text>
             </View>
           </View>
@@ -664,11 +492,11 @@ Order ID: ${order._id.slice(-8).toUpperCase()}`,
                     {getItemName(item)}
                   </Text>
                   <Text style={styles.itemPrice}>
-                    ${getItemPrice(item).toFixed(2)} x {item.quantity}
+                    {formatPrice(getItemPrice(item))} x {item.quantity}
                   </Text>
                 </View>
                 <Text style={styles.itemTotal}>
-                  ${(getItemPrice(item) * item.quantity).toFixed(2)}
+                  {formatPrice(getItemPrice(item) * item.quantity)}
                 </Text>
               </View>
             ))}
@@ -705,18 +533,25 @@ Order ID: ${order._id.slice(-8).toUpperCase()}`,
                 strokeWidth={2}
               />
               <View style={styles.paymentInfo}>
-                <Text style={styles.paymentMethod}>{order.paymentMethod}</Text>
+                <Text style={styles.paymentMethod}>
+                  {order.paymentMethod || paymentMethod || 'Razorpay'} (Default)
+                </Text>
                 <Text
                   style={[
                     styles.paymentStatus,
-                    getIsPaid(order) ? styles.paidStatus : styles.unpaidStatus,
+                    isPaid ? styles.paidStatus : styles.unpaidStatus,
                   ]}
                 >
-                  {getIsPaid(order) ? 'Paid' : 'Payment Pending'}
+                  {isPaid ? 'Paid' : 'Payment Pending'}
                 </Text>
               </View>
             </View>
-            {getIsPaid(order) && order.paidAt && (
+            {!isPaid && (
+              <Text style={styles.paidAtText}>
+                Pay securely with Razorpay to confirm your order.
+              </Text>
+            )}
+            {isPaid && order.paidAt && (
               <Text style={styles.paidAtText}>
                 Paid on {formatDate(order.paidAt)}
               </Text>
@@ -746,7 +581,7 @@ Order ID: ${order._id.slice(-8).toUpperCase()}`,
               styles.payNowButton,
               isProcessingPayment && styles.disabledButton,
             ]}
-            onPress={handlePayNow}
+            onPress={startRazorpayPayment}
             disabled={isProcessingPayment}
           >
             {isProcessingPayment ? (
@@ -756,32 +591,12 @@ Order ID: ${order._id.slice(-8).toUpperCase()}`,
               </View>
             ) : (
               <Text style={styles.payNowButtonText}>
-                Pay Now - ${getTotalPrice(order).toFixed(2)}
+                Place Order - {formatPrice(getTotalPrice(order))}
               </Text>
             )}
           </TouchableOpacity>
         )}
       </View>
-
-      {/* Payment Method Modal */}
-      <PaymentMethodModal
-        visible={showPaymentMethodModal}
-        onClose={() => setShowPaymentMethodModal(false)}
-        onSelectMethod={handlePaymentMethodSelect}
-        totalAmount={order ? getTotalPrice(order) : 0}
-      />
-
-      {/* SSLCommerz WebView */}
-      {order && (
-        <SSLCommerzWebView
-          visible={showSSLCommerzWebView}
-          paymentUrl={sslCommerzPaymentUrl}
-          orderId={order._id}
-          onSuccess={handleSSLCommerzSuccess}
-          onFailure={handleSSLCommerzFailure}
-          onCancel={handleSSLCommerzCancel}
-        />
-      )}
     </View>
   );
 };
@@ -863,6 +678,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: colors.secondaryText,
     fontWeight: '500',
+  },
+  statusSubtle: {
+    marginTop: 6,
+    fontSize: 14,
+    color: colors.secondaryText,
+    textAlign: 'center',
   },
   section: {
     marginBottom: 16,

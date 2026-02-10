@@ -18,6 +18,7 @@ import OrderPaymentModal from '../components/common/OrderPaymentModal';
 import { useAuth } from '../hooks/useAuth';
 import { orderAPI } from '../services/api';
 import { useOrderStore } from '../store';
+import { formatPrice } from '../config/environment';
 
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import {
@@ -563,11 +564,11 @@ const SingleOrderScreen: React.FC<Props> = ({ navigation, route }) => {
                   {getItemName(item)}
                 </Text>
                 <Text style={styles.itemPrice}>
-                  ${getItemPrice(item).toFixed(2)} x {item.quantity}
+                  {formatPrice(getItemPrice(item))} x {item.quantity}
                 </Text>
               </View>
               <Text style={styles.itemTotal}>
-                ${(getItemPrice(item) * item.quantity).toFixed(2)}
+                {formatPrice(getItemPrice(item) * item.quantity)}
               </Text>
             </View>
           ))}
@@ -579,7 +580,7 @@ const SingleOrderScreen: React.FC<Props> = ({ navigation, route }) => {
           <View style={styles.summaryRow}>
             <Text style={styles.summaryLabel}>Total</Text>
             <Text style={styles.totalValue}>
-              ${getTotalPrice(order).toFixed(2)}
+              {formatPrice(getTotalPrice(order))}
             </Text>
           </View>
         </View>

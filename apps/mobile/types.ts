@@ -45,6 +45,21 @@ export interface Order {
   totalPrice?: number; // Client format
   shippingPrice?: number;
   taxPrice?: number;
+  payment_info?: {
+    gateway?: 'razorpay' | 'cod';
+    razorpay?: {
+      orderId?: string;
+      paymentId?: string;
+      signature?: string;
+      method?: string;
+      cardLast4?: string;
+      cardNetwork?: string;
+      vpa?: string;
+    };
+    paidAmount?: number;
+    currency?: string;
+    paidAt?: string;
+  };
   status?:
     | 'pending'
     | 'paid'
@@ -163,7 +178,7 @@ export type RootStackParamList = {
   };
   Cart: undefined;
   PlaceOrder: undefined;
-  Checkout: { orderId: string; paymentMethod?: 'stripe' | 'sslcommerz' };
+  Checkout: { orderId: string; paymentMethod?: 'razorpay' };
   SingleOrder: { orderId: string };
   Orders: undefined;
   Wishlist: undefined;

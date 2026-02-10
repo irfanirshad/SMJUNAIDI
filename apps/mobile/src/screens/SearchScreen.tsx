@@ -23,6 +23,7 @@ import {
   ArrowRight01Icon,
   Camera01Icon,
 } from '@hugeicons/core-free-icons';
+import { formatPrice } from '../config/environment';
 
 const PER_PAGE = 20;
 
@@ -414,13 +415,15 @@ const SearchScreen: React.FC<any> = ({ navigation }) => {
             <View style={styles.priceContainer}>
               {item.discountPercentage ? (
                 <>
-                  <Text style={styles.salePrice}>${item.price.toFixed(2)}</Text>
+                  <Text style={styles.salePrice}>
+                    {formatPrice(item.price)}
+                  </Text>
                   <Text style={styles.originalPrice}>
-                    ${(item.originalPrice || item.price).toFixed(2)}
+                    {formatPrice(item.originalPrice || item.price)}
                   </Text>
                 </>
               ) : (
-                <Text style={styles.salePrice}>${item.price.toFixed(2)}</Text>
+                <Text style={styles.salePrice}>{formatPrice(item.price)}</Text>
               )}
             </View>
             {item.stock > 0 ? (
