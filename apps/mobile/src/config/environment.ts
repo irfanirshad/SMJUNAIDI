@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { NativeModules, Platform } from 'react-native';
 
 // Environment Configuration for Babymart Mobile App
 // This configuration matches the web app structure
@@ -6,13 +6,26 @@ import { Platform } from 'react-native';
 // API Configuration
 const isDevelopment = __DEV__;
 
+// Optional manual override: set your dev machine LAN IP so physical devices can reach it.
+// Example override: '192.168.1.4'
+const DEV_HOST_OVERRIDE = '192.168.48.204';    /// pc IP address from wifi lan connected.
+
+// Use Metro bundle host when available so physical devices hit your dev box over LAN.
+const getDevHost = () => {
+  if (DEV_HOST_OVERRIDE) return DEV_HOST_OVERRIDE;
+  const scriptURL = NativeModules?.SourceCode?.scriptURL as string | undefined;
+  const match = scriptURL?.match(/https?:\/\/([^/:]+)/);
+  if (match?.[1]) return match[1];
+  return Platform.OS === 'android' ? '10.0.2.2' : 'localhost';
+};
+
+const DEV_API_PORT = process.env.API_PORT || '8000';
+const DEV_API_PATH = '/api';
+
 export const getApiBaseUrl = (): string => {
   if (isDevelopment) {
-    // Android emulator uses 10.0.2.2 to access localhost
-    // iOS simulator uses localhost directly
-    return Platform.OS === 'android'
-      ? 'http://10.0.2.2:8000/api'
-      : 'http://localhost:8000/api';
+    const host = getDevHost();
+    return `http://${host}:${DEV_API_PORT}${DEV_API_PATH}`;
   }
   // Production API URL
   return 'https://api.babymart.reactbd.com/api';
