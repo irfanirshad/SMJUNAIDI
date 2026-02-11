@@ -37,7 +37,7 @@ router.use(protect);
 // Call Center routes
 router.get("/call-center/queue", callCenter, getCallCenterQueue);
 router.put("/:id/confirm-address", callCenter, confirmOrderAddress);
-router.put("/:id/confirm-order", callCenter, confirmOrder);
+router.put("/:id/confirm-order", incharge, confirmOrder);
 
 // Packer routes
 router.get("/packer/queue", packer, getPackerQueue);

@@ -97,8 +97,7 @@ interface Order {
   total?: number;
   status:
     | "pending"
-    | "address_confirmed"
-    | "confirmed"
+    | "payment_done"
     | "packed"
     | "delivering"
     | "delivered"
@@ -210,8 +209,6 @@ export default function OrdersPage() {
   const [perPage, setPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [refreshing, setRefreshing] = useState(false);
-  const [isAddressConfirmed, setIsAddressConfirmed] = useState(false);
-  const [isConfirmingAddress, setIsConfirmingAddress] = useState(false);
   const [originalOrderStatus, setOriginalOrderStatus] =
     useState<Order["status"]>("pending");
   const [originalOrder, setOriginalOrder] = useState<Order | null>(null);
@@ -220,10 +217,10 @@ export default function OrdersPage() {
   const [packedItems, setPackedItems] = useState<boolean[]>([]);
   const [packerTab, setPackerTab] = useState<"pending" | "packed">("pending");
 
-  // Call center tab state
-  const [callCenterTab, setCallCenterTab] = useState<"pending" | "confirmed">(
-    "pending"
-  );
+  // Call center tab state (view pending vs payment_done)
+  const [callCenterTab, setCallCenterTab] = useState<
+    "pending" | "payment_done"
+  >("pending");
 
   // Deliveryman tab state
   const [deliverymanTab, setDeliverymanTab] = useState<
@@ -290,9 +287,8 @@ export default function OrdersPage() {
       user?.role === "employee" && user?.employee_role === "call_center";
     if (!isCallCenter) return false;
 
-    // Call center can edit until order is confirmed (based on saved status, not dropdown)
+    // Call center can edit until order moves to fulfillment stages
     return (
-      orderStatus !== "confirmed" &&
       orderStatus !== "packed" &&
       orderStatus !== "delivering" &&
       orderStatus !== "delivered" &&
@@ -372,15 +368,13 @@ export default function OrdersPage() {
       let effectiveStatusFilter = statusFilter;
 
       if (isCallCenter) {
-        // Pending tab shows pending and address_confirmed orders (ready to confirm)
-        // Confirmed tab shows confirmed orders (confirmed by this call center agent)
-        effectiveStatusFilter =
-          callCenterTab === "pending" ? "call_center_pending" : "confirmed";
+        // Pending tab shows pending orders; second tab shows payment_done
+        effectiveStatusFilter = callCenterTab;
       } else if (isPacker) {
-        // Pending tab shows confirmed orders (ready to pack)
+        // Pending tab shows payment_done orders (ready to pack)
         // Packed tab shows packed orders (packed by this packer)
         effectiveStatusFilter =
-          packerTab === "pending" ? "confirmed" : "packed";
+          packerTab === "pending" ? "payment_done" : "packed";
       } else if (isDeliveryman) {
         // Pending tab shows packed orders (ready for delivery)
         // Delivering tab shows delivering orders
@@ -888,11 +882,7 @@ export default function OrdersPage() {
         return isHighlighted
           ? "bg-yellow-200 text-yellow-900 ring-2 ring-yellow-500 ring-offset-1"
           : "bg-yellow-100 text-yellow-800";
-      case "address_confirmed":
-        return isHighlighted
-          ? "bg-cyan-200 text-cyan-900 ring-2 ring-cyan-500 ring-offset-1"
-          : "bg-cyan-100 text-cyan-800";
-      case "confirmed":
+      case "payment_done":
         return isHighlighted
           ? "bg-blue-200 text-blue-900 ring-2 ring-blue-500 ring-offset-1"
           : "bg-blue-100 text-blue-800";
@@ -935,30 +925,15 @@ export default function OrdersPage() {
   const handleUpdateOrder = async (updatedOrder: Order) => {
     setIsUpdating(true);
     try {
-      // Check if call center is changing status to "confirmed"
-      const isCallCenter =
-        user?.role === "employee" && user?.employee_role === "call_center";
-      const isConfirmingOrder =
-        isCallCenter &&
-        (selectedOrder?.status === "pending" ||
-          selectedOrder?.status === "address_confirmed") &&
-        updatedOrder.status === "confirmed";
-
       // Check if packer is changing status to "packed"
       const isPacker =
         user?.role === "employee" && user?.employee_role === "packer";
       const isPackingOrder =
         isPacker &&
-        selectedOrder?.status === "confirmed" &&
+        selectedOrder?.status === "payment_done" &&
         updatedOrder.status === "packed";
 
-      if (isConfirmingOrder) {
-        // Use the workflow endpoint for call center confirming order
-        // This will set status_updates.order_confirmed
-        await axiosPrivate.put(
-          `/orders/workflow/${updatedOrder._id}/confirm-order`
-        );
-      } else if (isPackingOrder) {
+      if (isPackingOrder) {
         // Use the workflow endpoint for packer marking order as packed
         await axiosPrivate.put(`/orders/workflow/${updatedOrder._id}/pack`);
       } else {
@@ -988,7 +963,6 @@ export default function OrdersPage() {
       setIsEditOpen(false);
       setSelectedOrder(null);
       setOriginalOrderStatus("pending"); // Reset to default
-      setIsAddressConfirmed(false);
       fetchOrders(); // Refresh the orders list
     } catch (error: unknown) {
       console.error("Failed to update order:", error);
@@ -1044,61 +1018,6 @@ export default function OrdersPage() {
       });
     } finally {
       setIsAssigningDeliveryman(false);
-    }
-  };
-
-  const handleConfirmAddress = async () => {
-    if (!selectedOrder) return;
-
-    setIsConfirmingAddress(true);
-    try {
-      // Call the workflow endpoint to confirm address
-      await axiosPrivate.put(
-        `/orders/workflow/${selectedOrder._id}/confirm-address`,
-        {
-          shippingAddress: selectedOrder.shippingAddress,
-          notes: "Address verified and confirmed by call center",
-        }
-      );
-
-      // Update local state with the confirmed order
-      const updatedOrder = {
-        ...selectedOrder,
-        status: "address_confirmed" as Order["status"],
-      };
-
-      setSelectedOrder(updatedOrder);
-      setOriginalOrderStatus("address_confirmed"); // Update the original status
-      setIsAddressConfirmed(true);
-
-      // Update the order in the orders list without refetching
-      setOrders((prevOrders) =>
-        prevOrders.map((order) =>
-          order._id === selectedOrder._id
-            ? { ...order, status: "address_confirmed" as Order["status"] }
-            : order
-        )
-      );
-
-      toast({
-        title: "Success",
-        description:
-          "Address confirmed successfully. You can now update the order status.",
-      });
-    } catch (error: unknown) {
-      console.error("Failed to confirm address:", error);
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : (error as { response?: { data?: { message?: string } } })?.response
-              ?.data?.message || "Failed to confirm address";
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: errorMessage,
-      });
-    } finally {
-      setIsConfirmingAddress(false);
     }
   };
 
@@ -1256,11 +1175,11 @@ export default function OrdersPage() {
           <p className="text-gray-600 mt-2">
             {user?.role === "employee" && user?.employee_role === "call_center"
               ? callCenterTab === "pending"
-                ? "Address confirmed orders ready to confirm"
-                : "Orders you have confirmed"
+                ? "Pending orders awaiting payment"
+                : "Orders with payment completed"
               : user?.role === "employee" && user?.employee_role === "packer"
                 ? packerTab === "pending"
-                  ? "Confirmed orders ready for packing"
+                  ? "Payment completed orders ready for packing"
                   : "Orders you have packed"
                 : user?.role === "employee" &&
                     user?.employee_role === "deliveryman"
@@ -1319,12 +1238,12 @@ export default function OrdersPage() {
         transition={{ delay: 0.1 }}
         className="bg-white p-4 rounded-lg shadow-sm border space-y-4"
       >
-        {/* Call Center Tabs - Switch between pending and confirmed orders */}
+        {/* Call Center Tabs - Switch between pending and payment_done orders */}
         {user?.role === "employee" && user?.employee_role === "call_center" && (
           <Tabs
             value={callCenterTab}
             onValueChange={(value) =>
-              setCallCenterTab(value as "pending" | "confirmed")
+              setCallCenterTab(value as "pending" | "payment_done")
             }
             className="w-full"
           >
@@ -1334,11 +1253,11 @@ export default function OrdersPage() {
                 Pending Orders
               </TabsTrigger>
               <TabsTrigger
-                value="confirmed"
+                value="payment_done"
                 className="flex items-center gap-2"
               >
                 <CheckCircle className="h-4 w-4" />
-                My Confirmed Orders
+                Payment Done
               </TabsTrigger>
             </TabsList>
             <TabsContent value="pending" className="mt-4">
@@ -1346,24 +1265,23 @@ export default function OrdersPage() {
                 <AlertCircle className="h-5 w-5 text-blue-600 shrink-0" />
                 <div>
                   <p className="text-sm font-medium text-blue-900">
-                    Address Confirmed - Ready to Confirm
+                    Pending - Awaiting Payment
                   </p>
                   <p className="text-xs text-blue-700 mt-0.5">
-                    These orders have verified addresses and are ready to be
-                    confirmed
+                    These orders are waiting for payment completion
                   </p>
                 </div>
               </div>
             </TabsContent>
-            <TabsContent value="confirmed" className="mt-4">
+            <TabsContent value="payment_done" className="mt-4">
               <div className="bg-green-50 border border-green-200 rounded-lg p-3 flex items-center gap-3">
                 <CheckCircle className="h-5 w-5 text-green-600 shrink-0" />
                 <div>
                   <p className="text-sm font-medium text-green-900">
-                    My Confirmed Orders
+                    Payment Completed
                   </p>
                   <p className="text-xs text-green-700 mt-0.5">
-                    Orders that you have confirmed and sent to packing
+                    Orders with payment completed; ready for packing
                   </p>
                 </div>
               </div>
@@ -1395,10 +1313,10 @@ export default function OrdersPage() {
                 <Package className="h-5 w-5 text-orange-600 shrink-0" />
                 <div>
                   <p className="text-sm font-medium text-orange-900">
-                    Confirmed Orders - Ready to Pack
+                    Payment Done - Ready to Pack
                   </p>
                   <p className="text-xs text-orange-700 mt-0.5">
-                    These orders are confirmed and waiting to be packed
+                    Payment completed and waiting to be packed
                   </p>
                 </div>
               </div>
@@ -2193,10 +2111,7 @@ export default function OrdersPage() {
                   <SelectContent>
                     <SelectItem value="all">All Status</SelectItem>
                     <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="address_confirmed">
-                      Address Confirmed
-                    </SelectItem>
-                    <SelectItem value="confirmed">Confirmed</SelectItem>
+                    <SelectItem value="payment_done">Payment Done</SelectItem>
                     <SelectItem value="packed">Packed</SelectItem>
                     <SelectItem value="delivering">Delivering</SelectItem>
                     <SelectItem value="delivered">Delivered</SelectItem>
@@ -2371,7 +2286,7 @@ export default function OrdersPage() {
                             {order.items?.length || 0} items
                           </TableCell>
                           <TableCell className="font-medium">
-                            ${(order.totalAmount || 0).toFixed(2)}
+                            ₹{(order.totalAmount || 0).toFixed(2)}
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-2">
@@ -2432,14 +2347,6 @@ export default function OrdersPage() {
                                       false
                                     )
                                   ); // Initialize packed items
-                                  setIsAddressConfirmed(
-                                    order.status === "address_confirmed" ||
-                                      order.status === "confirmed" ||
-                                      order.status === "packed" ||
-                                      order.status === "delivering" ||
-                                      order.status === "delivered" ||
-                                      order.status === "completed"
-                                  );
                                   // Set assigned deliveryman if exists
                                   if (order.assignedDeliveryman) {
                                     const deliverymanId =
@@ -2607,14 +2514,6 @@ export default function OrdersPage() {
                               setPackedItems(
                                 new Array(order.items?.length || 0).fill(false)
                               ); // Initialize packed items
-                              setIsAddressConfirmed(
-                                order.status === "address_confirmed" ||
-                                  order.status === "confirmed" ||
-                                  order.status === "packed" ||
-                                  order.status === "delivering" ||
-                                  order.status === "delivered" ||
-                                  order.status === "completed"
-                              );
                               setIsEditOpen(true);
                             }}
                             title="Edit order"
@@ -2676,7 +2575,7 @@ export default function OrdersPage() {
                             Total
                           </p>
                           <p className="font-bold text-lg">
-                            ${(order.totalAmount || 0).toFixed(2)}
+                            ₹{(order.totalAmount || 0).toFixed(2)}
                           </p>
                         </div>
                       </div>
@@ -2968,7 +2867,7 @@ export default function OrdersPage() {
                           </div>
                         </div>
                         <p className="font-medium">
-                          ${(item.product?.price || item.price || 0).toFixed(2)}
+                          ₹{(item.product?.price || item.price || 0).toFixed(2)}
                         </p>
                       </div>
                     ))
@@ -2981,7 +2880,7 @@ export default function OrdersPage() {
               <div className="flex justify-between items-center pt-4 border-t">
                 <span className="text-lg font-semibold">Total Amount:</span>
                 <span className="text-2xl font-bold text-blue-600">
-                  ${selectedOrder.totalAmount.toFixed(2)}
+                  ₹{selectedOrder.totalAmount.toFixed(2)}
                 </span>
               </div>
             </div>
@@ -2994,7 +2893,7 @@ export default function OrdersPage() {
         open={isEditOpen}
         onOpenChange={(open) => {
           // Prevent closing if operations are in progress
-          if (!open && (isUpdating || isConfirmingAddress)) {
+          if (!open && isUpdating) {
             return;
           }
           setIsEditOpen(open);
@@ -3006,7 +2905,7 @@ export default function OrdersPage() {
             <SheetDescription>
               {user?.role === "employee" &&
               user?.employee_role === "call_center"
-                ? "Confirm address and update order status to confirmed"
+                ? "Review customer details, payments, and items"
                 : "Update order details, status, payment, and items information"}
             </SheetDescription>
           </SheetHeader>
@@ -3023,9 +2922,9 @@ export default function OrdersPage() {
                         Order Locked
                       </h4>
                       <p className="text-sm text-blue-700 mt-1">
-                        This order has been confirmed and is now locked. Call
-                        center cannot make further changes. Contact admin if
-                        modifications are needed.
+                        This order is already in fulfillment. Call center
+                        cannot make further changes. Contact admin if updates
+                        are needed.
                       </p>
                     </div>
                   </div>
@@ -3205,9 +3104,6 @@ export default function OrdersPage() {
                     disabled={
                       (user?.role === "employee" &&
                         user?.employee_role === "call_center" &&
-                        !isAddressConfirmed) ||
-                      (user?.role === "employee" &&
-                        user?.employee_role === "call_center" &&
                         !canCallCenterEdit(originalOrderStatus)) ||
                       (user?.role === "employee" &&
                         user?.employee_role === "deliveryman" &&
@@ -3223,26 +3119,18 @@ export default function OrdersPage() {
                       {user?.role === "employee" &&
                       user?.employee_role === "call_center" ? (
                         <>
-                          {selectedOrder.status === "pending" && (
-                            <SelectItem value="pending">Pending</SelectItem>
-                          )}
-                          {(selectedOrder.status === "address_confirmed" ||
-                            isAddressConfirmed) && (
-                            <SelectItem value="address_confirmed">
-                              Address Confirmed
-                            </SelectItem>
-                          )}
-                          {isAddressConfirmed && (
-                            <SelectItem value="confirmed">Confirmed</SelectItem>
-                          )}
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="payment_done">
+                            Payment Done
+                          </SelectItem>
                         </>
                       ) : user?.role === "employee" &&
                         user?.employee_role === "packer" ? (
                         <>
                           {/* Packer can only see and select "Packed" status */}
-                          {selectedOrder.status === "confirmed" && (
-                            <SelectItem value="confirmed" disabled>
-                              Confirmed
+                          {selectedOrder.status === "payment_done" && (
+                            <SelectItem value="payment_done" disabled>
+                              Payment Done
                             </SelectItem>
                           )}
                           <SelectItem value="packed">Packed</SelectItem>
@@ -3267,10 +3155,9 @@ export default function OrdersPage() {
                       ) : (
                         <>
                           <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="address_confirmed">
-                            Address Confirmed
+                          <SelectItem value="payment_done">
+                            Payment Done
                           </SelectItem>
-                          <SelectItem value="confirmed">Confirmed</SelectItem>
                           <SelectItem value="packed">Packed</SelectItem>
                           <SelectItem value="delivering">Delivering</SelectItem>
                           <SelectItem value="delivered">Delivered</SelectItem>
@@ -3284,10 +3171,9 @@ export default function OrdersPage() {
                     user?.employee_role === "call_center" && (
                       <p className="text-xs text-gray-500 mt-1">
                         {!canCallCenterEdit(originalOrderStatus)
-                          ? "Order is locked after confirmation - no changes allowed"
-                          : !isAddressConfirmed
-                            ? "Please confirm the address first to update status"
-                            : "Can only set status to 'Confirmed' after address confirmation"}
+                          ? "Order is locked once fulfillment starts"
+                          : "Pending and payment-completed orders can be updated"
+                        }
                       </p>
                     )}
                   {user?.role === "employee" &&
@@ -3419,7 +3305,7 @@ export default function OrdersPage() {
                   Total Amount (₹)
                   {canCallCenterEdit(originalOrderStatus) && (
                     <span className="ml-2 text-sm font-normal text-green-600">
-                      (Editable until Confirmed)
+                      (Editable until packed)
                     </span>
                   )}
                   {user?.role === "employee" &&
@@ -3460,7 +3346,7 @@ export default function OrdersPage() {
                   user?.employee_role === "call_center" &&
                   !canCallCenterEdit(originalOrderStatus) && (
                     <p className="text-xs text-gray-500 mt-1">
-                      Total amount is read-only after order is confirmed
+                      Total amount is read-only once packing/delivery starts
                     </p>
                   )}
                 {user?.role === "employee" &&
@@ -3476,38 +3362,10 @@ export default function OrdersPage() {
                 <div className="flex items-center justify-between mb-2">
                   <Label className="text-lg font-semibold">
                     Shipping Address
-                    {!isAddressConfirmed &&
-                      user?.role === "employee" &&
-                      user?.employee_role === "call_center" && (
-                        <span className="ml-2 text-sm font-normal text-green-600">
-                          (Editable)
-                        </span>
-                      )}
-                    {isAddressConfirmed && (
-                      <span className="ml-2 text-sm font-normal text-blue-600">
-                        <CheckCircle className="inline h-4 w-4 mr-1" />
-                        Confirmed
-                      </span>
-                    )}
+                    <span className="ml-2 text-sm font-normal text-green-600">
+                      (Editable)
+                    </span>
                   </Label>
-                  {user?.role === "employee" &&
-                    user?.employee_role === "call_center" &&
-                    (selectedOrder?.status === "pending" ||
-                      selectedOrder?.status === "address_confirmed") &&
-                    !isAddressConfirmed && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleConfirmAddress}
-                        disabled={isConfirmingAddress}
-                        className="text-green-600 border-green-600 hover:bg-green-50"
-                      >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        {isConfirmingAddress
-                          ? "Confirming..."
-                          : "Confirm Address"}
-                      </Button>
-                    )}
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                   <div>
@@ -3524,10 +3382,6 @@ export default function OrdersPage() {
                         })
                       }
                       className="mt-1"
-                      disabled={
-                        isConfirmingAddress ||
-                        (isAddressConfirmed && user?.role !== "admin")
-                      }
                     />
                   </div>
                   <div>
@@ -3544,10 +3398,6 @@ export default function OrdersPage() {
                         })
                       }
                       className="mt-1"
-                      disabled={
-                        isConfirmingAddress ||
-                        (isAddressConfirmed && user?.role !== "admin")
-                      }
                     />
                   </div>
                   <div>
@@ -3564,10 +3414,6 @@ export default function OrdersPage() {
                         })
                       }
                       className="mt-1"
-                      disabled={
-                        isConfirmingAddress ||
-                        (isAddressConfirmed && user?.role !== "admin")
-                      }
                     />
                   </div>
                   <div>
@@ -3584,10 +3430,6 @@ export default function OrdersPage() {
                         })
                       }
                       className="mt-1"
-                      disabled={
-                        isConfirmingAddress ||
-                        (isAddressConfirmed && user?.role !== "admin")
-                      }
                     />
                   </div>
                   <div className="md:col-span-2">
@@ -3604,22 +3446,12 @@ export default function OrdersPage() {
                         })
                       }
                       className="mt-1"
-                      disabled={
-                        isConfirmingAddress ||
-                        (isAddressConfirmed && user?.role !== "admin")
-                      }
                     />
                   </div>
                 </div>
-                {isAddressConfirmed && user?.role !== "admin" && (
-                  <p className="text-xs text-gray-500 mt-2">
-                    Address has been confirmed and is locked. Only admin can
-                    edit confirmed addresses.
-                  </p>
-                )}
               </div>
 
-              {/* Order Items - Editable for Call Center until Confirmed */}
+              {/* Order Items - Editable for Call Center until packed */}
               {(user?.role === "admin" ||
                 (user?.employee_role !== "call_center" &&
                   user?.employee_role !== "deliveryman" &&
@@ -3631,7 +3463,7 @@ export default function OrdersPage() {
                       Order Items
                       {canCallCenterEdit(originalOrderStatus) && (
                         <span className="ml-2 text-sm font-normal text-green-600">
-                          (Editable until Confirmed)
+                          (Editable until packed)
                         </span>
                       )}
                       {user?.role === "employee" &&
@@ -3949,7 +3781,7 @@ export default function OrdersPage() {
                 <Button
                   variant="outline"
                   onClick={() => setIsEditOpen(false)}
-                  disabled={isUpdating || isConfirmingAddress}
+                  disabled={isUpdating}
                   className="min-w-25"
                 >
                   Cancel
@@ -3959,12 +3791,9 @@ export default function OrdersPage() {
                   disabled={
                     !hasOrderChanged() ||
                     isUpdating ||
-                    isConfirmingAddress ||
                     (user?.role === "employee" &&
                       user?.employee_role === "call_center" &&
-                      (originalOrderStatus === "confirmed" ||
-                        (!canCallCenterEdit(originalOrderStatus) &&
-                          selectedOrder?.status !== "confirmed"))) || // Disable if order is already confirmed, or if changing TO confirmed
+                      !canCallCenterEdit(originalOrderStatus)) ||
                     (user?.role === "employee" &&
                       user?.employee_role === "packer" &&
                       (!packedItems.every((packed) => packed) ||
@@ -3977,9 +3806,10 @@ export default function OrdersPage() {
               </div>
               {user?.role === "employee" &&
                 user?.employee_role === "call_center" &&
-                originalOrderStatus === "confirmed" && (
+                !canCallCenterEdit(originalOrderStatus) && (
                   <p className="text-xs text-gray-500 text-right mt-2">
-                    This order is confirmed and is read-only
+                    This order is already moving through fulfillment and is
+                    read-only
                   </p>
                 )}
               {user?.role === "employee" &&
@@ -4048,10 +3878,8 @@ export default function OrdersPage() {
                                     "bg-purple-50 text-purple-700 border-purple-200",
                                   entry.status === "packed" &&
                                     "bg-indigo-50 text-indigo-700 border-indigo-200",
-                                  entry.status === "confirmed" &&
+                                  entry.status === "payment_done" &&
                                     "bg-cyan-50 text-cyan-700 border-cyan-200",
-                                  entry.status === "address_confirmed" &&
-                                    "bg-teal-50 text-teal-700 border-teal-200",
                                   entry.status === "pending" &&
                                     "bg-yellow-50 text-yellow-700 border-yellow-200"
                                 )}

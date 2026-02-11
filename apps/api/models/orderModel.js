@@ -40,8 +40,7 @@ const orderSchema = new mongoose.Schema(
       type: String,
       enum: [
         "pending",
-        "address_confirmed",
-        "confirmed",
+        "payment_done",
         "packed",
         "delivering",
         "delivered",
@@ -108,7 +107,7 @@ const orderSchema = new mongoose.Schema(
     },
     // Comprehensive status update tracking
     status_updates: {
-      address_confirmed: {
+      payment_done: {
         by: {
           id: {
             type: mongoose.Schema.Types.ObjectId,
@@ -118,16 +117,6 @@ const orderSchema = new mongoose.Schema(
         },
         at: Date,
         notes: String,
-      },
-      order_confirmed: {
-        by: {
-          id: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User",
-          },
-          name: String,
-        },
-        at: Date,
       },
       packed: {
         by: {
@@ -160,6 +149,28 @@ const orderSchema = new mongoose.Schema(
         at: Date,
       },
       completed: {
+        by: {
+          id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+          },
+          name: String,
+        },
+        at: Date,
+      },
+      // Legacy tracking retained for backward compatibility with old orders
+      address_confirmed: {
+        by: {
+          id: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+          },
+          name: String,
+        },
+        at: Date,
+        notes: String,
+      },
+      order_confirmed: {
         by: {
           id: {
             type: mongoose.Schema.Types.ObjectId,

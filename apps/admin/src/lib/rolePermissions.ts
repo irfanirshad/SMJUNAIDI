@@ -202,13 +202,13 @@ export const getOrderStatusForRole = (
     switch (employeeRole) {
       case "call_center":
         return {
-          availableStatuses: ["pending", "address_confirmed", "confirmed"],
-          highlightStatuses: ["pending"],
+          availableStatuses: ["pending", "payment_done"],
+          highlightStatuses: ["pending", "payment_done"],
         };
       case "packer":
         return {
-          availableStatuses: ["address_confirmed", "confirmed", "packed"],
-          highlightStatuses: ["address_confirmed", "confirmed"],
+          availableStatuses: ["payment_done", "packed"],
+          highlightStatuses: ["payment_done"],
         };
       case "deliveryman":
         return {
@@ -224,8 +224,7 @@ export const getOrderStatusForRole = (
         return {
           availableStatuses: [
             "pending",
-            "address_confirmed",
-            "confirmed",
+            "payment_done",
             "packed",
             "delivering",
             "delivered",
@@ -234,8 +233,7 @@ export const getOrderStatusForRole = (
           ],
           highlightStatuses: [
             "pending",
-            "address_confirmed",
-            "confirmed",
+            "payment_done",
             "packed",
           ],
         };
@@ -257,8 +255,10 @@ export const getOrderStatusForRole = (
 export const getStatusLabel = (status: string): string => {
   const labels: Record<string, string> = {
     pending: "Pending",
-    address_confirmed: "Address Confirmed",
-    confirmed: "Confirmed",
+    payment_done: "Payment Done",
+    // Legacy statuses mapped for backward compatibility
+    address_confirmed: "Payment Done",
+    confirmed: "Payment Done",
     packed: "Packed",
     delivering: "Delivering",
     delivered: "Delivered",

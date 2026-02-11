@@ -8,7 +8,7 @@ const isDevelopment = __DEV__;
 
 // Optional manual override: set your dev machine LAN IP so physical devices can reach it.
 // Example override: '192.168.1.4'
-const DEV_HOST_OVERRIDE = '192.168.1.17';    /// pc IP address from wifi lan connected.
+const DEV_HOST_OVERRIDE = '192.168.1.12';    /// pc IP address from wifi lan connected.
 
 // Use Metro bundle host when available so physical devices hit your dev box over LAN.
 const getDevHost = () => {

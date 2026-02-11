@@ -626,39 +626,7 @@ const OrderDetailsPage = () => {
               order.createdAt,
               [
                 "pending",
-                "address_confirmed",
-                "confirmed",
-                "packed",
-                "delivering",
-                "delivered",
-                "completed",
-              ].includes(order.status)
-            )}
-
-            {/* Address Confirmed */}
-            {renderTimelineStep(
-              "address_confirmed",
-              "Address Confirmed",
-              "Delivery address has been verified",
-              order.status_updates?.address_confirmed?.timestamp,
-              [
-                "address_confirmed",
-                "confirmed",
-                "packed",
-                "delivering",
-                "delivered",
-                "completed",
-              ].includes(order.status)
-            )}
-
-            {/* Confirmed */}
-            {renderTimelineStep(
-              "confirmed",
-              "Order Confirmed",
-              "Your order has been confirmed",
-              order.status_updates?.confirmed?.timestamp,
-              [
-                "confirmed",
+                "payment_done",
                 "packed",
                 "delivering",
                 "delivered",

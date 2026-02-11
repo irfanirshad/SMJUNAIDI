@@ -40,15 +40,14 @@ export const getRolePermissions = (
       canDeleteUsers: true,
       availableOrderStatuses: [
         'pending',
-        'address_confirmed',
-        'confirmed',
+        'payment_done',
         'packed',
         'delivering',
         'delivered',
         'completed',
         'cancelled',
       ],
-      highlightOrderStatuses: ['pending', 'address_confirmed'],
+      highlightOrderStatuses: ['pending', 'payment_done'],
     };
   }
 
@@ -70,8 +69,8 @@ export const getRolePermissions = (
           canCreateUsers: false,
           canEditUsers: false,
           canDeleteUsers: false,
-          availableOrderStatuses: ['pending', 'address_confirmed', 'confirmed'],
-          highlightOrderStatuses: ['pending'],
+          availableOrderStatuses: ['pending', 'payment_done'],
+          highlightOrderStatuses: ['pending', 'payment_done'],
         };
 
       case 'packer':
@@ -89,8 +88,8 @@ export const getRolePermissions = (
           canCreateUsers: false,
           canEditUsers: false,
           canDeleteUsers: false,
-          availableOrderStatuses: ['address_confirmed', 'confirmed', 'packed'],
-          highlightOrderStatuses: ['address_confirmed', 'confirmed'],
+          availableOrderStatuses: ['payment_done', 'packed'],
+          highlightOrderStatuses: ['payment_done'],
         };
 
       case 'deliveryman':
@@ -148,8 +147,7 @@ export const getRolePermissions = (
           canDeleteUsers: false,
           availableOrderStatuses: [
             'pending',
-            'address_confirmed',
-            'confirmed',
+            'payment_done',
             'packed',
             'delivering',
             'delivered',
@@ -158,8 +156,7 @@ export const getRolePermissions = (
           ],
           highlightOrderStatuses: [
             'pending',
-            'address_confirmed',
-            'confirmed',
+            'payment_done',
             'packed',
           ],
         };
@@ -195,8 +192,10 @@ const getNoPermissions = (): RolePermission => ({
 export const getStatusLabel = (status: string): string => {
   const labels: Record<string, string> = {
     pending: 'Pending',
-    address_confirmed: 'Address Confirmed',
-    confirmed: 'Confirmed',
+    payment_done: 'Payment Done',
+    // Legacy statuses mapped to new wording for old orders
+    address_confirmed: 'Payment Done',
+    confirmed: 'Payment Done',
     packed: 'Packed',
     delivering: 'Delivering',
     delivered: 'Delivered',

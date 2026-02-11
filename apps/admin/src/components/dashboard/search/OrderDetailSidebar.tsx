@@ -51,8 +51,7 @@ interface Order {
   total?: number;
   status:
     | "pending"
-    | "address_confirmed"
-    | "confirmed"
+    | "payment_done"
     | "packed"
     | "delivering"
     | "delivered"
@@ -190,8 +189,7 @@ export default function OrderDetailSidebar({
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       pending: "bg-yellow-500",
-      address_confirmed: "bg-blue-500",
-      confirmed: "bg-indigo-500",
+      payment_done: "bg-indigo-500",
       packed: "bg-purple-500",
       delivering: "bg-orange-500",
       delivered: "bg-green-500",
@@ -265,7 +263,7 @@ export default function OrderDetailSidebar({
                   Total Amount
                 </span>
                 <span className="font-semibold text-lg">
-                  ${(order.totalAmount || order.total || 0).toFixed(2)}
+                  ₹{(order.totalAmount || order.total || 0).toFixed(2)}
                 </span>
               </div>
               <div className="flex items-center gap-2 pt-2">
@@ -327,12 +325,12 @@ export default function OrderDetailSidebar({
                       <div className="flex-1 min-w-0">
                         <p className="font-medium truncate">{itemName}</p>
                         <p className="text-sm text-muted-foreground">
-                          ${itemPrice.toFixed(2)} × {item.quantity}
+                          ₹{itemPrice.toFixed(2)} × {item.quantity}
                         </p>
                       </div>
                       <div className="text-right">
                         <p className="font-semibold">
-                          ${(itemPrice * item.quantity).toFixed(2)}
+                          ₹{(itemPrice * item.quantity).toFixed(2)}
                         </p>
                       </div>
                     </div>
@@ -373,10 +371,7 @@ export default function OrderDetailSidebar({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="pending">Pending</SelectItem>
-                    <SelectItem value="address_confirmed">
-                      Address Confirmed
-                    </SelectItem>
-                    <SelectItem value="confirmed">Confirmed</SelectItem>
+                    <SelectItem value="payment_done">Payment Done</SelectItem>
                     <SelectItem value="packed">Packed</SelectItem>
                     <SelectItem value="delivering">Delivering</SelectItem>
                     <SelectItem value="delivered">Delivered</SelectItem>

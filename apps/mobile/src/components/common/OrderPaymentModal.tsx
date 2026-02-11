@@ -263,7 +263,7 @@ const OrderPaymentModal: React.FC<Props> = ({
 
     Alert.alert(
       'Payment Successful! 🎉',
-      'Your payment has been processed successfully. Your order is now confirmed.',
+        'Your payment has been processed successfully. Your order is now paid and will be packed soon.',
       [
         {
           text: 'View Order',

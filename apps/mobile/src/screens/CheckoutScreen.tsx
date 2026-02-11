@@ -279,7 +279,7 @@ const CheckoutScreen: React.FC<Props> = ({ navigation, route }) => {
         'Payment Successful! 🎉',
         `Your payment of ${formatPrice(
           getTotalPrice(order),
-        )} was successful. Your order is now confirmed.`,
+        )} was successful. Your order is now paid and will be packed soon.`,
         [
           {
             text: 'View Order',

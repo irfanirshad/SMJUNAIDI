@@ -372,7 +372,7 @@ export default function VendorProductsList() {
                       </div>
                     </TableCell>
                     <TableCell>{product.category?.name}</TableCell>
-                    <TableCell>${product.price.toFixed(2)}</TableCell>
+                    <TableCell>₹{product.price.toFixed(2)}</TableCell>
                     <TableCell>{product.stock}</TableCell>
                     <TableCell>
                       {getStatusBadge(product.approvalStatus)}
@@ -569,7 +569,7 @@ export default function VendorProductsList() {
                         />
                       ) : (
                         <p className="text-lg font-semibold text-green-600">
-                          ${selectedProduct.price.toFixed(2)}
+                          ₹{selectedProduct.price.toFixed(2)}
                         </p>
                       )}
                     </div>

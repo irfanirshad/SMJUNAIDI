@@ -28,7 +28,7 @@ import { Input } from "../../../components/ui/input";
 import { Checkbox } from "../../../components/ui/checkbox";
 import { Button } from "../../../components/ui/button";
 import authApi from "../../../lib/authApi";
-import { GoogleSignInButton, GitHubSignInButton } from "./OAuthButtons";
+import { GoogleSignInButton } from "./OAuthButtons";
 
 // Define the schema for the login form
 const loginSchema = z
@@ -286,17 +286,6 @@ const SignInForm = () => {
 
                 <div className="grid grid-cols-1 gap-3">
                   <GoogleSignInButton
-                    disabled={isLoading}
-                    redirectTo={redirectTo}
-                    onSuccess={() => {
-                      toast.success("Login successful", {
-                        description: "You have been signed in with OAuth",
-                        className:
-                          "bg-green-50 text-green-800 border-green-200",
-                      });
-                    }}
-                  />
-                  <GitHubSignInButton
                     disabled={isLoading}
                     redirectTo={redirectTo}
                     onSuccess={() => {

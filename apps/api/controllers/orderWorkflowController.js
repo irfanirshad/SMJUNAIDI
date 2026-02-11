@@ -72,9 +72,9 @@ const getCallCenterQueue = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc    Confirm order address by call center
+// @desc    Update order address (no dedicated address-confirmed status anymore)
 // @route   PUT /api/orders/workflow/:id/confirm-address
-// @access  Private/Call Center
+// @access  Private/Call Center/Admin
 const confirmOrderAddress = asyncHandler(async (req, res) => {
   const { shippingAddress } = req.body;
 
@@ -84,18 +84,12 @@ const confirmOrderAddress = asyncHandler(async (req, res) => {
     throw new Error("Order not found");
   }
 
-  // Allow confirming address for pending and address_confirmed orders
-  // This allows call center to update address even after initial confirmation
-  if (order.status !== "pending" && order.status !== "address_confirmed") {
+  if (["delivered", "completed", "cancelled"].includes(order.status)) {
     res.status(400);
-    throw new Error(
-      "Cannot confirm address for orders that have already been confirmed for packing"
-    );
+    throw new Error("Cannot update address for completed or cancelled orders");
   }
 
-  // Update shipping address if provided
   if (shippingAddress) {
-    // Merge address fields while preserving existing values
     order.shippingAddress = {
       street: shippingAddress.street || order.shippingAddress.street,
       city: shippingAddress.city || order.shippingAddress.city,
@@ -109,34 +103,28 @@ const confirmOrderAddress = asyncHandler(async (req, res) => {
   }
 
   const userName = req.user.name || req.user.email;
-  order.status = "address_confirmed";
 
-  // Initialize status_updates if it doesn't exist (for old orders)
-  if (!order.status_updates) {
-    order.status_updates = {};
-  }
-
-  // Update status_updates object
-  updateStatusTracking(order, "address_confirmed", req.user._id, userName);
-
-  // Mark status_updates as modified for Mongoose to save nested objects
-  order.markModified("status_updates");
-
-  // Add to status history
-  addStatusHistory(order, "address_confirmed", req.user._id, userName);
+  // Track address update without changing the order status
+  addStatusHistory(
+    order,
+    order.status,
+    req.user._id,
+    userName,
+    "Shipping address updated"
+  );
 
   await order.save({ validateBeforeSave: true });
 
   res.json({
     success: true,
-    message: "Order address confirmed successfully",
+    message: "Shipping address updated successfully",
     data: order,
   });
 });
 
-// @desc    Mark order as confirmed (ready for packing)
+// @desc    Mark payment as done (replaces old order confirmation step)
 // @route   PUT /api/orders/workflow/:id/confirm-order
-// @access  Private/Call Center/Admin
+// @access  Private/Admin
 const confirmOrder = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id);
   if (!order) {
@@ -144,44 +132,34 @@ const confirmOrder = asyncHandler(async (req, res) => {
     throw new Error("Order not found");
   }
 
-  if (!["pending", "address_confirmed"].includes(order.status)) {
+  if (!["pending", "payment_done"].includes(order.status)) {
     res.status(400);
-    throw new Error("Order cannot be confirmed at this stage");
+    throw new Error("Order cannot be marked as paid at this stage");
   }
 
   const userName = req.user.name || req.user.email;
 
-  // Initialize status_updates if it doesn't exist (for old orders)
   if (!order.status_updates) {
     order.status_updates = {};
   }
 
-  // If address wasn't confirmed yet, mark it as confirmed now
-  if (order.status === "pending") {
-    updateStatusTracking(order, "address_confirmed", req.user._id, userName);
-  }
+  order.status = "payment_done";
 
-  order.status = "confirmed";
-
-  // Update status_updates object for order confirmation
-  updateStatusTracking(order, "order_confirmed", req.user._id, userName);
-
-  // Mark status_updates as modified for Mongoose to save nested objects
+  updateStatusTracking(order, "payment_done", req.user._id, userName);
   order.markModified("status_updates");
 
-  // Add to status history
-  addStatusHistory(order, "confirmed", req.user._id, userName);
+  addStatusHistory(order, "payment_done", req.user._id, userName);
 
   await order.save();
 
   res.json({
     success: true,
-    message: "Order confirmed successfully",
+    message: "Order marked as payment done",
     data: order,
   });
 });
 
-// @desc    Get orders for packer (confirmed orders ready to be packed)
+// @desc    Get orders for packer (payment_done orders ready to be packed)
 // @route   GET /api/orders/workflow/packer/queue
 // @access  Private/Packer
 const getPackerQueue = asyncHandler(async (req, res) => {
@@ -189,7 +167,7 @@ const getPackerQueue = asyncHandler(async (req, res) => {
   const skip = (page - 1) * limit;
 
   const orders = await Order.find({
-    status: { $in: ["address_confirmed", "confirmed", "processing"] },
+    status: "payment_done",
   })
     .populate("userId", "name email")
     .sort({ createdAt: 1 })
@@ -197,7 +175,7 @@ const getPackerQueue = asyncHandler(async (req, res) => {
     .limit(parseInt(limit));
 
   const total = await Order.countDocuments({
-    status: { $in: ["address_confirmed", "confirmed", "processing"] },
+    status: "payment_done",
   });
 
   res.json({
@@ -239,18 +217,15 @@ const assignPacker = asyncHandler(async (req, res) => {
     throw new Error("Order not found");
   }
 
-  if (
-    !["address_confirmed", "confirmed", "processing"].includes(order.status)
-  ) {
+  if (!["payment_done", "packed"].includes(order.status)) {
     res.status(400);
     throw new Error("Order is not ready for packing assignment");
   }
 
   order.assignedPacker = packerId;
-  order.status = "processing";
 
   const userName = req.user.name || req.user.email;
-  addStatusHistory(order, "processing", req.user._id, userName);
+  addStatusHistory(order, order.status, req.user._id, userName, "Packer assigned");
 
   await order.save();
 
@@ -272,7 +247,7 @@ const packOrder = asyncHandler(async (req, res) => {
   }
 
   // Check if user is assigned packer or admin
-  // Allow packer role to pack confirmed orders without assignment
+  // Allow packer role to pack payment_done orders without assignment
   if (
     req.user.role !== "admin" &&
     req.user.employee_role !== "packer" &&
@@ -283,9 +258,9 @@ const packOrder = asyncHandler(async (req, res) => {
     throw new Error("You are not assigned to pack this order");
   }
 
-  if (order.status !== "confirmed") {
+  if (order.status !== "payment_done") {
     res.status(400);
-    throw new Error("Order must be confirmed before packing");
+    throw new Error("Order must have payment done before packing");
   }
 
   const userName = req.user.name || req.user.email;

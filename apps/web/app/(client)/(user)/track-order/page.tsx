@@ -15,21 +15,21 @@ import Link from "next/link";
 const TrackOrderPage = () => {
   const trackingSteps = [
     {
-      status: "Order Confirmed",
-      description: "Your order has been received and confirmed",
+      status: "Order Placed",
+      description: "Your order has been received",
       icon: <CheckCircle size={20} />,
       completed: true,
     },
     {
-      status: "Processing",
-      description: "We're preparing your items for shipment",
-      icon: <Package2 size={20} />,
+      status: "Payment Completed",
+      description: "Payment received successfully",
+      icon: <CheckCircle size={20} />,
       completed: true,
     },
     {
-      status: "Shipped",
-      description: "Your order has been picked up by our shipping partner",
-      icon: <Truck size={20} />,
+      status: "Order Packed",
+      description: "We're preparing your items for shipment",
+      icon: <Package2 size={20} />,
       completed: false,
       current: true,
     },

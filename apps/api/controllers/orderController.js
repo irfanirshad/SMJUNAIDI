@@ -89,12 +89,12 @@ export const createCODOrder = asyncHandler(async (req, res) => {
   // Calculate final total
   const total = subtotal + shipping + tax;
 
-  // Create COD order with "confirmed" status
+  // Create COD order with "pending" status (payment will be collected later)
   const order = await Order.create({
     userId: req.user._id,
     items: validItems,
     total,
-    status: "confirmed",
+    status: "pending",
     paymentStatus: "pending",
     paymentMethod: "cod",
     shippingAddress,
@@ -102,13 +102,13 @@ export const createCODOrder = asyncHandler(async (req, res) => {
     // Initialize status history
     status_history: [
       {
-        status: "confirmed",
+        status: "pending",
         changed_at: new Date(),
         changed_by: {
           id: req.user._id,
           name: req.user.name || req.user.email,
         },
-        notes: "COD order created and confirmed",
+        notes: "COD order created",
       },
     ],
   });
@@ -293,8 +293,7 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
   // Validate status
   const validStatuses = [
     "pending",
-    "address_confirmed",
-    "confirmed",
+    "payment_done",
     "packed",
     "delivering",
     "delivered",
@@ -304,7 +303,7 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
   if (!status || !validStatuses.includes(status)) {
     res.status(400);
     throw new Error(
-      "Invalid status. Must be one of: pending, address_confirmed, confirmed, packed, delivering, delivered, completed, cancelled"
+      "Invalid status. Must be one of: pending, payment_done, packed, delivering, delivered, completed, cancelled"
     );
   }
 
@@ -346,8 +345,8 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
       // Define allowed status transitions for each employee role
       const allowedTransitions = {
         packer: {
-          from: ["confirmed", "processing"],
-          to: ["processing", "packed"],
+          from: ["payment_done"],
+          to: ["packed"],
         },
         deliveryman: {
           from: ["packed", "delivering"],
@@ -358,9 +357,16 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
           to: ["completed"],
         },
         incharge: {
-          from: ["confirmed", "packed", "delivering", "delivered"],
+          from: [
+            "payment_done",
+            "packed",
+            "delivering",
+            "delivered",
+            "completed",
+            "cancelled",
+          ],
           to: [
-            "confirmed",
+            "payment_done",
             "packed",
             "delivering",
             "delivered",
@@ -407,15 +413,10 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
     const statusUpdateField = `status_updates.${status}`;
 
     switch (status) {
-      case "address_confirmed":
-        updateData[`status_updates.address_confirmed.by.id`] = req.user._id;
-        updateData[`status_updates.address_confirmed.by.name`] = userName;
-        updateData[`status_updates.address_confirmed.at`] = new Date();
-        break;
-      case "confirmed":
-        updateData[`status_updates.order_confirmed.by.id`] = req.user._id;
-        updateData[`status_updates.order_confirmed.by.name`] = userName;
-        updateData[`status_updates.order_confirmed.at`] = new Date();
+      case "payment_done":
+        updateData[`status_updates.payment_done.by.id`] = req.user._id;
+        updateData[`status_updates.payment_done.by.name`] = userName;
+        updateData[`status_updates.payment_done.at`] = new Date();
         break;
       case "packed":
         updateData[`${statusUpdateField}.by.id`] = req.user._id;
@@ -484,10 +485,8 @@ export const updateOrderStatus = asyncHandler(async (req, res) => {
     try {
       const userId = updatedOrder.userId._id || updatedOrder.userId;
 
-      if (status === "confirmed") {
-        await notificationService.notifyOrderConfirmed(userId, updatedOrder);
-      } else if (status === "shipped") {
-        await notificationService.notifyOrderShipped(userId, updatedOrder);
+      if (status === "payment_done") {
+        await notificationService.notifyPaymentSuccess(userId, updatedOrder);
       } else if (status === "delivered") {
         await notificationService.notifyOrderDelivered(userId, updatedOrder);
       }
@@ -574,6 +573,9 @@ export const updateOrderPaymentStatus = asyncHandler(async (req, res) => {
       currency: (currency || order.payment_info?.currency || process.env.PAYMENT_CURRENCY || "INR").toUpperCase(),
       paidAt: new Date(),
     };
+    if (order.status === "pending") {
+      updateData.status = "payment_done";
+    }
   } else if (["pending", "failed", "refunded"].includes(status)) {
     // Handle other payment statuses
     updateData.paymentStatus = status;
@@ -581,10 +583,11 @@ export const updateOrderPaymentStatus = asyncHandler(async (req, res) => {
     // For order status updates from webhook (shouldn't happen but handle anyway)
     const validStatuses = [
       "pending",
-      "confirmed",
-      "processing",
-      "shipped",
+      "payment_done",
+      "packed",
+      "delivering",
       "delivered",
+      "completed",
       "cancelled",
     ];
     if (validStatuses.includes(status)) {
@@ -648,17 +651,14 @@ export const updateOrder = asyncHandler(async (req, res) => {
   if (isEmployee) {
     switch (employeeRole) {
       case "call_center":
-        // Call center can only update pending/address_confirmed orders
-        if (
-          order.status !== "pending" &&
-          order.status !== "address_confirmed"
-        ) {
+        // Call center can only work with orders before packing
+        if (!["pending", "payment_done"].includes(order.status)) {
           res.status(403);
           throw new Error(
-            "Call center can only update pending or address confirmed orders"
+            "Call center can only update pending or payment_done orders"
           );
         }
-        // Call center cannot change payment status
+        // Call center cannot change payment status directly
         if (
           paymentStatus !== undefined &&
           paymentStatus !== order.paymentStatus
@@ -669,15 +669,11 @@ export const updateOrder = asyncHandler(async (req, res) => {
         break;
 
       case "packer":
-        // Packer can update processing/packed orders
-        if (
-          order.status !== "confirmed" &&
-          order.status !== "processing" &&
-          order.status !== "packed"
-        ) {
+        // Packer can update payment_done or packed orders
+        if (order.status !== "payment_done" && order.status !== "packed") {
           res.status(403);
           throw new Error(
-            "Packer can only update confirmed, processing, or packed orders"
+            "Packer can only update payment_done or packed orders"
           );
         }
         break;
@@ -720,8 +716,7 @@ export const updateOrder = asyncHandler(async (req, res) => {
   if (status) {
     const validStatuses = [
       "pending",
-      "address_confirmed",
-      "confirmed",
+      "payment_done",
       "packed",
       "delivering",
       "delivered",
@@ -731,18 +726,24 @@ export const updateOrder = asyncHandler(async (req, res) => {
     if (!validStatuses.includes(status)) {
       res.status(400);
       throw new Error(
-        "Invalid status. Must be one of: pending, address_confirmed, confirmed, packed, delivering, delivered, completed, cancelled"
+        "Invalid status. Must be one of: pending, payment_done, packed, delivering, delivered, completed, cancelled"
       );
     }
   }
 
   // Validate payment status if provided
   if (paymentStatus) {
-    const validPaymentStatuses = ["pending", "paid", "failed", "refunded"];
+    const validPaymentStatuses = [
+      "pending",
+      "paid",
+      "failed",
+      "refunded",
+      "cod_collected",
+    ];
     if (!validPaymentStatuses.includes(paymentStatus)) {
       res.status(400);
       throw new Error(
-        "Invalid payment status. Must be one of: pending, paid, failed, refunded"
+        "Invalid payment status. Must be one of: pending, paid, failed, refunded, cod_collected"
       );
     }
   }
@@ -775,16 +776,7 @@ export const updateOrder = asyncHandler(async (req, res) => {
       const statusUpdateField = `status_updates.${status}`;
 
       switch (status) {
-        case "address_confirmed":
-          updateData[`status_updates.address_confirmed.by.id`] = req.user._id;
-          updateData[`status_updates.address_confirmed.by.name`] = userName;
-          updateData[`status_updates.address_confirmed.at`] = new Date();
-          break;
-        case "confirmed":
-          updateData[`status_updates.order_confirmed.by.id`] = req.user._id;
-          updateData[`status_updates.order_confirmed.by.name`] = userName;
-          updateData[`status_updates.order_confirmed.at`] = new Date();
-          break;
+        case "payment_done":
         case "packed":
         case "delivering":
         case "delivered":
@@ -873,37 +865,12 @@ export const getAllOrdersAdmin = asyncHandler(async (req, res) => {
   // Build filter object
   const filter = {};
 
-  // Track if we need to filter by specific user actions
-  let needsUserFilter = false;
-
   if (status && status !== "all") {
-    // Special handling for call center pending orders
     if (
-      status === "call_center_pending" &&
-      req.user.role === "employee" &&
-      req.user.employee_role === "call_center"
-    ) {
-      // Show both pending and address_confirmed orders
-      filter.status = { $in: ["pending", "address_confirmed"] };
-      needsUserFilter = true;
-    }
-    // For call center viewing their confirmed orders
-    else if (
-      status === "confirmed" &&
-      req.user.role === "employee" &&
-      req.user.employee_role === "call_center"
-    ) {
-      needsUserFilter = true;
-      filter.status = status;
-      filter["status_updates.order_confirmed.by.id"] = req.user._id;
-    }
-    // For packers viewing their packed orders
-    else if (
       status === "packed" &&
       req.user.role === "employee" &&
       req.user.employee_role === "packer"
     ) {
-      needsUserFilter = true;
       filter.status = status;
       filter["status_updates.packed.by.id"] = req.user._id;
     } else {
@@ -912,24 +879,7 @@ export const getAllOrdersAdmin = asyncHandler(async (req, res) => {
   }
 
   if (paymentStatus && paymentStatus !== "all") {
-    // Map payment status to actual status values
-    if (paymentStatus === "paid") {
-      // If we already have a status filter (like "packed"), combine them
-      if (filter.status && !needsUserFilter) {
-        // Don't override if it's a single status
-        // Only override if we haven't set a specific status
-      } else if (!filter.status) {
-        filter.status = { $in: ["paid", "completed"] };
-      }
-    } else if (paymentStatus === "pending") {
-      if (!filter.status) {
-        filter.status = "pending";
-      }
-    } else if (paymentStatus === "failed") {
-      if (!filter.status) {
-        filter.status = "cancelled";
-      }
-    }
+    filter.paymentStatus = paymentStatus;
   }
 
   const skip = (page - 1) * perPage;
