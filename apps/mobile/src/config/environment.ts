@@ -69,6 +69,7 @@ export const calculateOrderTotal = (subtotal: number): number => {
 
 // Available Countries
 export const AVAILABLE_COUNTRIES = [
+  "India",
   'Bangladesh',
   'United States',
   'Canada',
@@ -76,7 +77,7 @@ export const AVAILABLE_COUNTRIES = [
   'Australia',
   'Germany',
   'France',
-  'India',
+  // 'India',
   'Japan',
   'China',
 ];
